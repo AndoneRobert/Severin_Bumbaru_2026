@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const CATEGORIES = ['Infrastructură', 'Iluminat', 'Apă/Canal', 'Spații verzi', 'Salubritate', 'Altele'];
@@ -137,9 +136,6 @@ export default function Dashboard() {
                             : 'Urmărește și gestionează sesizările tale'}
                     </p>
                 </div>
-                <Link to="/create-issue" className="btn-primary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                    ✚ Sesizare nouă
-                </Link>
             </div>
 
             {/* Stats mini */}

@@ -3,17 +3,17 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
-    const [mode, setMode]             = useState('login'); // 'login' | 'register'
-    const [email, setEmail]           = useState('');
-    const [password, setPassword]     = useState('');
+    const [mode, setMode] = useState('login'); // 'login' | 'register'
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [confirmPass, setConfirmPass] = useState('');
-    const [fullName, setFullName]     = useState('');
-    const [phone, setPhone]           = useState('');
-    const [showPass, setShowPass]     = useState(false);
+    const [fullName, setFullName] = useState('');
+    const [phone, setPhone] = useState('');
+    const [showPass, setShowPass] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
-    const [error, setError]           = useState('');
-    const [success, setSuccess]       = useState('');
-    const [loading, setLoading]       = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+    const [loading, setLoading] = useState(false);
     const [agreedTerms, setAgreedTerms] = useState(false);
 
     const { login, register } = useAuth();
@@ -32,12 +32,12 @@ const Login = () => {
     };
 
     const validateRegister = () => {
-        if (!fullName.trim())           return 'Numele complet este obligatoriu.';
+        if (!fullName.trim()) return 'Numele complet este obligatoriu.';
         if (fullName.trim().length < 3) return 'Numele trebuie să aibă cel puțin 3 caractere.';
-        if (!email.includes('@'))       return 'Adresa de email nu este validă.';
-        if (password.length < 6)        return 'Parola trebuie să aibă cel puțin 6 caractere.';
-        if (password !== confirmPass)   return 'Parolele nu coincid.';
-        if (!agreedTerms)               return 'Trebuie să accepți termenii și condițiile.';
+        if (!email.includes('@')) return 'Adresa de email nu este validă.';
+        if (password.length < 6) return 'Parola trebuie să aibă cel puțin 6 caractere.';
+        if (password !== confirmPass) return 'Parolele nu coincid.';
+        if (!agreedTerms) return 'Trebuie să accepți termenii și condițiile.';
         return null;
     };
 
@@ -132,7 +132,7 @@ const Login = () => {
                 </div>
 
                 {/* Eroare / Succes */}
-                {error   && <div className="auth-alert auth-alert-error"><span>⚠️</span>{error}</div>}
+                {error && <div className="auth-alert auth-alert-error"><span>⚠️</span>{error}</div>}
                 {success && <div className="auth-alert auth-alert-success"><span>✓</span>{success}</div>}
 
                 {/* ─── FORM LOGIN ─── */}
@@ -141,7 +141,6 @@ const Login = () => {
                         <div className="auth-field">
                             <label>Adresă email</label>
                             <div className="auth-input-wrap">
-                                <span className="auth-input-icon">✉️</span>
                                 <input
                                     type="email"
                                     placeholder="exemplu@galati.ro"
@@ -161,7 +160,6 @@ const Login = () => {
                                 </button>
                             </div>
                             <div className="auth-input-wrap">
-                                <span className="auth-input-icon">🔑</span>
                                 <input
                                     type={showPass ? 'text' : 'password'}
                                     placeholder="••••••••"
@@ -171,7 +169,7 @@ const Login = () => {
                                     autoComplete="current-password"
                                 />
                                 <button type="button" className="auth-eye" onClick={() => setShowPass(!showPass)}>
-                                    {showPass ? '🙈' : '👁'}
+                                    {showPass ? 'Ascunde' : 'Arata'}
                                 </button>
                             </div>
                         </div>
@@ -198,7 +196,6 @@ const Login = () => {
                         <div className="auth-field">
                             <label>Nume complet <span className="auth-req">*</span></label>
                             <div className="auth-input-wrap">
-                                <span className="auth-input-icon">👤</span>
                                 <input
                                     type="text"
                                     placeholder="Ex: Ion Ionescu"
@@ -215,7 +212,6 @@ const Login = () => {
                         <div className="auth-field">
                             <label>Adresă email <span className="auth-req">*</span></label>
                             <div className="auth-input-wrap">
-                                <span className="auth-input-icon">✉️</span>
                                 <input
                                     type="email"
                                     placeholder="exemplu@galati.ro"
@@ -231,7 +227,6 @@ const Login = () => {
                         <div className="auth-field">
                             <label>Telefon <span className="auth-optional">(opțional)</span></label>
                             <div className="auth-input-wrap">
-                                <span className="auth-input-icon">📱</span>
                                 <input
                                     type="tel"
                                     placeholder="07xx xxx xxx"
@@ -247,7 +242,6 @@ const Login = () => {
                         <div className="auth-field">
                             <label>Parolă <span className="auth-req">*</span></label>
                             <div className="auth-input-wrap">
-                                <span className="auth-input-icon">🔑</span>
                                 <input
                                     type={showPass ? 'text' : 'password'}
                                     placeholder="Minim 6 caractere"
@@ -258,14 +252,14 @@ const Login = () => {
                                     minLength={6}
                                 />
                                 <button type="button" className="auth-eye" onClick={() => setShowPass(!showPass)}>
-                                    {showPass ? '🙈' : '👁'}
+                                    {showPass ? 'Ascunde' : 'Arata'}
                                 </button>
                             </div>
                             {/* Indicator putere parolă */}
                             {strength && (
                                 <div className="auth-strength">
                                     <div className="auth-strength-bar">
-                                        {[1,2,3].map(l => (
+                                        {[1, 2, 3].map(l => (
                                             <div
                                                 key={l}
                                                 className="auth-strength-seg"
@@ -282,7 +276,6 @@ const Login = () => {
                         <div className="auth-field">
                             <label>Confirmă parola <span className="auth-req">*</span></label>
                             <div className="auth-input-wrap">
-                                <span className="auth-input-icon">🔒</span>
                                 <input
                                     type={showConfirm ? 'text' : 'password'}
                                     placeholder="Repetă parola"
@@ -293,7 +286,7 @@ const Login = () => {
                                     style={{ borderColor: confirmPass && password !== confirmPass ? '#ef4444' : '' }}
                                 />
                                 <button type="button" className="auth-eye" onClick={() => setShowConfirm(!showConfirm)}>
-                                    {showConfirm ? '🙈' : '👁'}
+                                    {showConfirm ? 'Ascunde' : 'Arata'}
                                 </button>
                             </div>
                             {confirmPass && password !== confirmPass && (
@@ -465,12 +458,9 @@ const Login = () => {
                 .auth-input-wrap {
                     position: relative; display: flex; align-items: center;
                 }
-                .auth-input-icon {
-                    position: absolute; left: 12px; font-size: 14px;
-                    pointer-events: none; z-index: 1;
-                }
+                
                 .auth-input-wrap input {
-                    width: 100%; padding: 11px 42px 11px 38px;
+                    width: 100%; padding: 11px 42px 11px 14px;
                     background: rgba(255,255,255,.04);
                     border: 1px solid rgba(255,255,255,.09);
                     border-radius: 10px; color: #e8f0fe; font-family: inherit;
