@@ -16,19 +16,19 @@ function MapLoader() {
 }
 
 const CAT_META = {
-  1: { icon: '🚧', label: 'Drumuri & Asfalt',  grad: 'linear-gradient(135deg,#fef3c7,#fde68a)' },
-  2: { icon: '💡', label: 'Iluminat Stradal',   grad: 'linear-gradient(135deg,#ede9fe,#ddd6fe)' },
-  3: { icon: '🗑️', label: 'Salubritate',        grad: 'linear-gradient(135deg,#d1fae5,#a7f3d0)' },
-  4: { icon: '🌳', label: 'Spații Verzi',       grad: 'linear-gradient(135deg,#dcfce7,#bbf7d0)' },
-  5: { icon: '🚰', label: 'Apă & Canalizare',   grad: 'linear-gradient(135deg,#dbeafe,#bfdbfe)' },
-  6: { icon: '🚌', label: 'Transport Public',   grad: 'linear-gradient(135deg,#fce7f3,#fbcfe8)' },
+  1: { icon: '🚧', label: 'Drumuri & Asfalt', grad: 'linear-gradient(135deg,#fef3c7,#fde68a)' },
+  2: { icon: '💡', label: 'Iluminat Stradal', grad: 'linear-gradient(135deg,#ede9fe,#ddd6fe)' },
+  3: { icon: '🗑️', label: 'Salubritate', grad: 'linear-gradient(135deg,#d1fae5,#a7f3d0)' },
+  4: { icon: '🌳', label: 'Spații Verzi', grad: 'linear-gradient(135deg,#dcfce7,#bbf7d0)' },
+  5: { icon: '🚰', label: 'Apă & Canalizare', grad: 'linear-gradient(135deg,#dbeafe,#bfdbfe)' },
+  6: { icon: '🚌', label: 'Transport Public', grad: 'linear-gradient(135deg,#fce7f3,#fbcfe8)' },
 }
 
 const S = {
-  new:         { label:'Nouă',      cls:'badge-new' },
-  in_progress: { label:'În lucru',  cls:'badge-progress' },
-  resolved:    { label:'Rezolvată', cls:'badge-resolved' },
-  rejected:    { label:'Respinsă',  cls:'badge-rejected' },
+  new: { label: 'Nouă', cls: 'badge-new' },
+  in_progress: { label: 'În lucru', cls: 'badge-progress' },
+  resolved: { label: 'Rezolvată', cls: 'badge-resolved' },
+  rejected: { label: 'Respinsă', cls: 'badge-rejected' },
 }
 
 function timeAgo(dateStr) {
@@ -45,7 +45,7 @@ function timeAgo(dateStr) {
 function Home() {
   const { user } = useAuth()
 
-  const [stats, setStats]       = useState({ total: 0, resolved: 0, citizens: 0, avgDays: null })
+  const [stats, setStats] = useState({ total: 0, resolved: 0, citizens: 0, avgDays: null })
   const [categories, setCategories] = useState(
     Object.entries(CAT_META).map(([id, m]) => ({ ...m, id: Number(id), count: 0 }))
   )
@@ -62,8 +62,8 @@ function Home() {
 
       if (!reports) return
 
-      const total         = reports.length
-      const resolvedList  = reports.filter(r => r.status === 'resolved')
+      const total = reports.length
+      const resolvedList = reports.filter(r => r.status === 'resolved')
       const resolvedCount = resolvedList.length
 
       // Medie zile până la rezolvare (aproximare: created_at → acum)
@@ -172,10 +172,10 @@ function Home() {
                   <div className="hero-card__title">Sesizare nouă</div>
                   <div className="hero-card__sub">Groapă Bd. Galați, nr. 45</div>
                 </div>
-                <span className="badge badge-new" style={{marginLeft:'auto'}}>Nouă</span>
+                <span className="badge badge-new" style={{ marginLeft: 'auto' }}>Nouă</span>
               </div>
               <div className="hero-card__bar">
-                <div className="bar-track"><div className="bar-fill" style={{width:'30%'}} /></div>
+                <div className="bar-track"><div className="bar-fill" style={{ width: '30%' }} /></div>
                 <span className="bar-label">În așteptare</span>
               </div>
             </div>
@@ -189,11 +189,11 @@ function Home() {
 
             {/* card mic dreapta */}
             <div className="hero-card hero-card--sm hero-card--tr">
-              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <span className="live-dot" />
-                <span style={{fontSize:'.78rem',fontWeight:700,color:'#10b981'}}>LIVE</span>
+                <span style={{ fontSize: '.78rem', fontWeight: 700, color: '#10b981' }}>LIVE</span>
               </div>
-              <div className="hero-card__stat-num" style={{fontSize:'1.4rem'}}>12</div>
+              <div className="hero-card__stat-num" style={{ fontSize: '1.4rem' }}>12</div>
               <div className="hero-card__stat-label">sesizări active acum</div>
             </div>
 
@@ -204,7 +204,7 @@ function Home() {
 
         {/* wave bottom */}
         <svg className="hero__wave" viewBox="0 0 1440 90" preserveAspectRatio="none">
-          <path d="M0,45 C240,90 480,0 720,45 C960,90 1200,0 1440,45 L1440,90 L0,90Z" fill="var(--bg)"/>
+          <path d="M0,45 C240,90 480,0 720,45 C960,90 1200,0 1440,45 L1440,90 L0,90Z" fill="var(--bg)" />
         </svg>
       </section>
 
@@ -212,7 +212,7 @@ function Home() {
       <section className="section bento-section">
         <div className="container">
           <div className="section-label">De ce Galați Sesizări?</div>
-          <h2 className="section-title" style={{marginBottom:40}}>Platforma care face diferența</h2>
+          <h2 className="section-title" style={{ marginBottom: 40 }}>Platforma care face diferența</h2>
 
           <div className="bento-grid">
             <div className="bento-card bento-card--blue bento-big">
@@ -231,14 +231,14 @@ function Home() {
 
             <div className="bento-card bento-card--violet">
               <div className="bento-card__eyebrow">Timp mediu răspuns</div>
-              <div className="bento-card__num">4.2 <span style={{fontSize:'1.2rem'}}>zile</span></div>
+              <div className="bento-card__num">4.2 <span style={{ fontSize: '1.2rem' }}>zile</span></div>
               <p className="bento-card__desc">De la sesizare la primirea unui răspuns</p>
               <div className="bento-card__deco">⚡</div>
             </div>
 
             <div className="bento-card bento-card--dark bento-wide">
-              <div className="bento-card__eyebrow" style={{color:'rgba(255,255,255,.55)'}}>Cel mai rapid mod de a raporta o problemă</div>
-              <div className="bento-card__num" style={{color:'#fff',fontSize:'2rem',fontWeight:800}}>
+              <div className="bento-card__eyebrow" style={{ color: 'rgba(255,255,255,.55)' }}>Cel mai rapid mod de a raporta o problemă</div>
+              <div className="bento-card__num" style={{ color: '#fff', fontSize: '2rem', fontWeight: 800 }}>
                 3 pași · sub 2 minute
               </div>
               <div className="bento-steps">
@@ -280,8 +280,8 @@ function Home() {
           <p className="section-desc">Orice problemă urbană din Municipiul Galați</p>
 
           <div className="cat-grid">
-            {CATEGORIES.map(c => (
-              <Link to="/report/new" key={c.label} className="cat-card" style={{'--grad': c.grad}}>
+            {categories.map(c => (
+              <Link to="/report/new" key={c.label} className="cat-card" style={{ '--grad': c.grad }}>
                 <span className="cat-card__icon">{c.icon}</span>
                 <strong className="cat-card__name">{c.label}</strong>
                 <span className="cat-card__count">{c.count} sesizări</span>
@@ -298,24 +298,28 @@ function Home() {
           <div className="recent-header">
             <div>
               <div className="section-label">Live</div>
-              <h2 className="section-title" style={{marginBottom:0}}>Sesizări recente</h2>
+              <h2 className="section-title" style={{ marginBottom: 0 }}>Sesizări recente</h2>
             </div>
             <Link to="/" className="btn btn-outline btn-sm">Vezi toate →</Link>
           </div>
 
           <div className="recent-list">
-            {RECENT.map((r, i) => (
-              <Link to={`/report/${r.id}`} className="recent-row" key={r.id}
-                style={{'--delay': `${i * 80}ms`}}>
-                <div className="recent-row__icon">{r.icon}</div>
-                <div className="recent-row__body">
-                  <span className="recent-row__title">{r.title}</span>
-                  <span className="recent-row__meta">{r.cat} · {r.time}</span>
-                </div>
-                <span className={`badge ${S[r.status].cls}`}>{S[r.status].label}</span>
-                <span className="recent-row__chevron">›</span>
-              </Link>
-            ))}
+            {recent.map((r, i) => {
+              const meta = CAT_META[r.category_id] || { icon: '📌', label: 'Categorie' }
+              const status = S[r.status] || S.new
+              return (
+                <Link to={`/report/${r.id}`} className="recent-row" key={r.id}
+                  style={{ '--delay': `${i * 80}ms` }}>
+                  <div className="recent-row__icon">{meta.icon}</div>
+                  <div className="recent-row__body">
+                    <span className="recent-row__title">{r.title}</span>
+                    <span className="recent-row__meta">{meta.label} · {timeAgo(r.created_at)}</span>
+                  </div>
+                  <span className={`badge ${status.cls}`}>{status.label}</span>
+                  <span className="recent-row__chevron">›</span>
+                </Link>
+              )
+            })}
           </div>
         </div>
       </section>
@@ -324,12 +328,12 @@ function Home() {
       <section className="cta-band">
         <div className="cta-band__noise" />
         <div className="cta-band__glows">
-          <div className="cta-glow g1"/><div className="cta-glow g2"/>
+          <div className="cta-glow g1" /><div className="cta-glow g2" />
         </div>
         <div className="container cta-band__inner">
           <div className="cta-band__text">
             <div className="cta-band__tag">Alătură-te comunității</div>
-            <h2 className="cta-band__h2">Gălățenii merită<br/>un oraș mai bun.</h2>
+            <h2 className="cta-band__h2">Gălățenii merită<br />un oraș mai bun.</h2>
             <p className="cta-band__p">
               Fiecare sesizare contează. Împreună construim un Galați mai curat,
               mai sigur și mai funcțional.

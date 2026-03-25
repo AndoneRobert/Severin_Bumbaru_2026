@@ -25,6 +25,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [ready, setReady] = useState(false)
   const initialized = useRef(false)
+  const loading = !ready
 
   useEffect(() => {
     // Timeout de siguranță: dacă onAuthStateChange nu răspunde în 3s, deblocăm UI
