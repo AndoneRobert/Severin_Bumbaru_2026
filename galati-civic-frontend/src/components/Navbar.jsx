@@ -44,7 +44,7 @@ const MapPicker = ({ onPick, active }) => {
 };
 
 export default function Navbar() {
-    const { user, isAdmin, isAuthenticated, logout, displayName, avatarInitial } = useAuth();
+    const { user, isAdmin, isAuthenticated, logout, displayName, avatarInitial, getToken } = useAuth();
     const [menuOpen, setMenuOpen] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [reportOpen, setReportOpen] = useState(false); // Panoul de raportare
@@ -112,10 +112,21 @@ export default function Navbar() {
             if (useMock) {
                 await new Promise(r => setTimeout(r, 900));
             } else {
-                const { default: axios } = await import('axios');
-                await axios.post(`${apiUrl}/issues`, {
-                    ...form, lat: location.lat, lng: location.lng,
-                }, { headers: { Authorization: `Bearer ${user?.token}` } });
+                const token = (await getToken?.()) || user?.token;
+                const response = await fetch(`${apiUrl}/issues`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
+                    body: JSON.stringify({
+                        ...form,
+                        lat: location.lat,
+                        lng: location.lng,
+                        user_id: user?.id ?? null,
+                    }),
+                });
+                if (!response.ok) throw new Error('Issue submit failed');
             }
             setStep(3);
         } catch {
