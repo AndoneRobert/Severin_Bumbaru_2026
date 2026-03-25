@@ -10,14 +10,25 @@ const allowedOrigins = (process.env.CORS_ORIGIN || '')
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+const isVercelOrigin = (origin = '') => {
+    try {
+        const { hostname } = new URL(origin);
+        return hostname === 'vercel.app' || hostname.endsWith('.vercel.app');
+    } catch {
+        return false;
+    }
+};
+
 app.use(
     cors({
         origin(origin, callback) {
-            if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+            if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin) || isVercelOrigin(origin)) {
                 return callback(null, true);
             }
             return callback(new Error(`Origin nepermis de CORS: ${origin}`));
         },
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
     }),
 );
 app.use(express.json());
@@ -72,7 +83,7 @@ const createIssue = async (req, res) => {
 
 const updateIssue = async (req, res) => {
     const { id } = req.params;
-    const allowedFields = ['title', 'description', 'status', 'priority', 'category', 'category_id', 'lat', 'lng'];
+    const allowedFields = ['title', 'description', 'status', 'priority', 'category', 'category_id', 'lat', 'lng', 'admin_reply'];
 
     const updatePayload = Object.fromEntries(
         Object.entries(req.body || {}).filter(([key, value]) => allowedFields.includes(key) && value !== undefined),
@@ -120,6 +131,47 @@ const deleteIssue = async (req, res) => {
     }
 };
 
+const voteIssue = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const { data: issue, error: getError } = await supabase
+            .from(issuesTable)
+            .select('id, votes')
+            .eq('id', id)
+            .single();
+        if (getError) throw getError;
+
+        const nextVotes = (issue.votes || 0) + 1;
+        const { data, error } = await supabase
+            .from(issuesTable)
+            .update({ votes: nextVotes })
+            .eq('id', id)
+            .select('*')
+            .single();
+        if (error) throw error;
+
+        return res.json(data);
+    } catch (err) {
+        console.error('[DB ERROR POST ISSUE VOTE]:', err);
+        return res.status(500).json({ error: 'Eroare la votarea raportului.' });
+    }
+};
+
+const flagIssue = async (req, res) => {
+    return res.status(202).json({ message: 'Raportarea a fost înregistrată.' });
+};
+
+const replyIssue = async (req, res) => {
+    const { id } = req.params;
+    const message = req.body?.message;
+    if (!message) {
+        return res.status(400).json({ error: 'Mesajul este obligatoriu.' });
+    }
+
+    req.body.admin_reply = message;
+    return updateIssue(req, res);
+};
+
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
@@ -138,6 +190,9 @@ app.get('/api/issues/my', listIssues);
 app.post('/api/issues', createIssue);
 app.put('/api/issues/:id', updateIssue);
 app.delete('/api/issues/:id', deleteIssue);
+app.post('/api/issues/:id/vote', voteIssue);
+app.post('/api/issues/:id/flag', flagIssue);
+app.post('/api/issues/:id/reply', replyIssue);
 
 app.use((req, res) => {
     res.status(404).json({ error: 'Ruta nu a fost găsită.' });

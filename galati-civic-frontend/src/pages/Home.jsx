@@ -24,9 +24,9 @@ const STATUS_ICONS = {
 
 const CATEGORIES = [
     { value: 'Infrastructură', icon: '🛣️' }, { value: 'Iluminat', icon: '💡' },
-    { value: 'Apă/Canal', icon: '💧' },       { value: 'Spații verzi', icon: '🌳' },
-    { value: 'Salubritate', icon: '🗑️' },     { value: 'Zgomot/Poluare', icon: '🔊' },
-    { value: 'Vandalism', icon: '🚧' },        { value: 'Trafic/Parcare', icon: '🚗' },
+    { value: 'Apă/Canal', icon: '💧' }, { value: 'Spații verzi', icon: '🌳' },
+    { value: 'Salubritate', icon: '🗑️' }, { value: 'Zgomot/Poluare', icon: '🔊' },
+    { value: 'Vandalism', icon: '🚧' }, { value: 'Trafic/Parcare', icon: '🚗' },
     { value: 'Altele', icon: '📋' },
 ];
 const PRIORITY_LEVELS = ['Scăzută', 'Medie', 'Ridicată', 'Urgentă'];
@@ -87,29 +87,29 @@ const Toast = ({ msg, show, type = 'info' }) => (
 
 // ── Componenta principală ──
 const Home = () => {
-    const [issues, setIssues]               = useState([]);
-    const [filter, setFilter]               = useState('Toate');
-    const [catFilter, setCatFilter]         = useState('Toate');
-    const [search, setSearch]               = useState('');
-    const [newLocation, setNewLocation]     = useState(null);
+    const [issues, setIssues] = useState([]);
+    const [filter, setFilter] = useState('Toate');
+    const [catFilter, setCatFilter] = useState('Toate');
+    const [search, setSearch] = useState('');
+    const [newLocation, setNewLocation] = useState(null);
     const [selectedIssue, setSelectedIssue] = useState(null);
-    const [toast, setToast]                 = useState({ msg: '', show: false, type: 'info' });
-    const [sortBy, setSortBy]               = useState('date');
-    const [formData, setFormData]           = useState({ title: '', description: '', category: 'Infrastructură', priority: 'Medie' });
-    const [submitting, setSubmitting]       = useState(false);
-    const [adminReply, setAdminReply]       = useState('');
-    const [showReplyBox, setShowReplyBox]   = useState(null);
-    const [votedIssues, setVotedIssues]     = useState(new Set());
+    const [toast, setToast] = useState({ msg: '', show: false, type: 'info' });
+    const [sortBy, setSortBy] = useState('date');
+    const [formData, setFormData] = useState({ title: '', description: '', category: 'Infrastructură', priority: 'Medie' });
+    const [submitting, setSubmitting] = useState(false);
+    const [adminReply, setAdminReply] = useState('');
+    const [showReplyBox, setShowReplyBox] = useState(null);
+    const [votedIssues, setVotedIssues] = useState(new Set());
     const [followedIssues, setFollowedIssues] = useState(new Set());
     const [flaggedIssues, setFlaggedIssues] = useState(new Set());
-    const [activeView, setActiveView]       = useState('map');
-    const [isLoading, setIsLoading]         = useState(true);
+    const [activeView, setActiveView] = useState('map');
+    const [isLoading, setIsLoading] = useState(true);
     const [urgentBannerClosed, setUrgentBannerClosed] = useState(false);
 
     const { user } = useAuth();
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const apiUrl = (import.meta.env.VITE_API_URL || 'https://severin-bumbaru-2026.onrender.com/api').replace(/\/+$/, '');
     const isAdmin = user?.role === 'admin' || user?.email === 'admin@galati.ro';
-    const useMock = !import.meta.env.VITE_API_URL;
+    const useMock = import.meta.env.VITE_USE_MOCK === 'true';
 
     const showToast = useCallback((msg, type = 'info') => {
         setToast({ msg, show: true, type });
@@ -239,8 +239,8 @@ const Home = () => {
             return ms && mc && mq;
         })
         .sort((a, b) => {
-            if (sortBy === 'votes')    return (b.votes || 0) - (a.votes || 0);
-            if (sortBy === 'priority') { const idx = ['Urgentă','Ridicată','Medie','Scăzută']; return idx.indexOf(a.priority) - idx.indexOf(b.priority); }
+            if (sortBy === 'votes') return (b.votes || 0) - (a.votes || 0);
+            if (sortBy === 'priority') { const idx = ['Urgentă', 'Ridicată', 'Medie', 'Scăzută']; return idx.indexOf(a.priority) - idx.indexOf(b.priority); }
             return new Date(b.created_at || 0) - new Date(a.created_at || 0);
         });
 
@@ -259,9 +259,9 @@ const Home = () => {
         if (!issue) return null;
         const lat = issue.lat || issue.latitude;
         const lng = issue.lng || issue.longitude;
-        const isVoted    = votedIssues.has(issue.id);
+        const isVoted = votedIssues.has(issue.id);
         const isFollowed = followedIssues.has(issue.id);
-        const isFlagged  = flaggedIssues.has(issue.id);
+        const isFlagged = flaggedIssues.has(issue.id);
         return (
             <div className="modal-overlay" onClick={() => setSelectedIssue(null)}>
                 <div className="modal-box" onClick={e => e.stopPropagation()}>
@@ -421,11 +421,11 @@ const Home = () => {
 
             {/* ── STATS ── */}
             <section className="stats-section">
-                <StatCard value={isLoading ? '...' : issues.length}                                      label="Sesizări totale"   icon="📋" color="#3b82f6" delay={0}   trend={12} />
-                <StatCard value={isLoading ? '...' : resolvedCount}                                       label="Rezolvate"         icon="✅" color="#10b981" delay={80}  trend={8} />
-                <StatCard value={isLoading ? '...' : issues.filter(i => i.status === 'În lucru').length}  label="În lucru"          icon="⚙️" color="#f59e0b" delay={160} />
-                <StatCard value={isLoading ? '...' : issues.filter(i => i.status === 'Nou').length}       label="Noi"               icon="🆕" color="#ef4444" delay={240} />
-                <StatCard value={isLoading ? '...' : issues.reduce((s, i) => s + (i.votes || 0), 0)}      label="Voturi totale"     icon="▲"  color="#a855f7" delay={320} trend={25} />
+                <StatCard value={isLoading ? '...' : issues.length} label="Sesizări totale" icon="📋" color="#3b82f6" delay={0} trend={12} />
+                <StatCard value={isLoading ? '...' : resolvedCount} label="Rezolvate" icon="✅" color="#10b981" delay={80} trend={8} />
+                <StatCard value={isLoading ? '...' : issues.filter(i => i.status === 'În lucru').length} label="În lucru" icon="⚙️" color="#f59e0b" delay={160} />
+                <StatCard value={isLoading ? '...' : issues.filter(i => i.status === 'Nou').length} label="Noi" icon="🆕" color="#ef4444" delay={240} />
+                <StatCard value={isLoading ? '...' : issues.reduce((s, i) => s + (i.votes || 0), 0)} label="Voturi totale" icon="▲" color="#a855f7" delay={320} trend={25} />
             </section>
 
             {/* ── CATEGORII RAPIDE ── */}
@@ -624,41 +624,41 @@ const Home = () => {
                     </div>
                     <div className="issues-scroll">
                         {isLoading ? Array(4).fill(0).map((_, i) => <SkeletonRow key={i} />) :
-                         filteredIssues.length === 0 ? (
-                            <div className="empty-state">
-                                <div className="empty-icon">📭</div>
-                                <p>Nicio sesizare găsită</p>
-                                <span>Încearcă să schimbi filtrele</span>
-                            </div>
-                        ) : filteredIssues.map(issue => (
-                            <div key={issue.id} className="issue-row" onClick={() => setSelectedIssue(issue)}>
-                                <div className="issue-row-top">
-                                    <span className="issue-cat-icon">{CATEGORIES.find(c => c.value === issue.category)?.icon || '📋'}</span>
-                                    <div className="issue-row-content">
-                                        <div className="issue-row-title-line">
-                                            <span className="issue-row-title">{issue.title}</span>
-                                            <StatusBadge status={issue.status} />
-                                        </div>
-                                        <div className="issue-row-sub">
-                                            {issue.category && <span className="issue-cat">{issue.category}</span>}
-                                            {issue.priority && <PriorityDot priority={issue.priority} />}
-                                            <span className="issue-date">{issue.created_at ? new Date(issue.created_at).toLocaleDateString('ro-RO') : ''}</span>
-                                        </div>
-                                        <p className="issue-row-desc">{issue.description?.substring(0, 85)}{issue.description?.length > 85 ? '...' : ''}</p>
-                                        <div className="issue-row-actions" onClick={e => e.stopPropagation()}>
-                                            <button className={`vote-btn ${votedIssues.has(issue.id) ? 'voted' : ''}`} onClick={e => handleVote(issue.id, e)}>▲ {issue.votes || 0}</button>
-                                            <button className={`follow-btn ${followedIssues.has(issue.id) ? 'followed' : ''}`} onClick={e => handleFollow(issue.id, e)}>👁 Urmăresc</button>
-                                            <button className={`flag-btn ${flaggedIssues.has(issue.id) ? 'flagged' : ''}`} onClick={e => handleFlag(issue.id, e)} disabled={flaggedIssues.has(issue.id)}>🚩</button>
-                                            {isAdmin && (
-                                                <select value={issue.status} onChange={e => updateStatus(issue.id, e.target.value, e)} className="admin-select-inline" onClick={e => e.stopPropagation()}>
-                                                    <option>Nou</option><option>În lucru</option><option>În verificare</option><option>Rezolvat</option>
-                                                </select>
-                                            )}
+                            filteredIssues.length === 0 ? (
+                                <div className="empty-state">
+                                    <div className="empty-icon">📭</div>
+                                    <p>Nicio sesizare găsită</p>
+                                    <span>Încearcă să schimbi filtrele</span>
+                                </div>
+                            ) : filteredIssues.map(issue => (
+                                <div key={issue.id} className="issue-row" onClick={() => setSelectedIssue(issue)}>
+                                    <div className="issue-row-top">
+                                        <span className="issue-cat-icon">{CATEGORIES.find(c => c.value === issue.category)?.icon || '📋'}</span>
+                                        <div className="issue-row-content">
+                                            <div className="issue-row-title-line">
+                                                <span className="issue-row-title">{issue.title}</span>
+                                                <StatusBadge status={issue.status} />
+                                            </div>
+                                            <div className="issue-row-sub">
+                                                {issue.category && <span className="issue-cat">{issue.category}</span>}
+                                                {issue.priority && <PriorityDot priority={issue.priority} />}
+                                                <span className="issue-date">{issue.created_at ? new Date(issue.created_at).toLocaleDateString('ro-RO') : ''}</span>
+                                            </div>
+                                            <p className="issue-row-desc">{issue.description?.substring(0, 85)}{issue.description?.length > 85 ? '...' : ''}</p>
+                                            <div className="issue-row-actions" onClick={e => e.stopPropagation()}>
+                                                <button className={`vote-btn ${votedIssues.has(issue.id) ? 'voted' : ''}`} onClick={e => handleVote(issue.id, e)}>▲ {issue.votes || 0}</button>
+                                                <button className={`follow-btn ${followedIssues.has(issue.id) ? 'followed' : ''}`} onClick={e => handleFollow(issue.id, e)}>👁 Urmăresc</button>
+                                                <button className={`flag-btn ${flaggedIssues.has(issue.id) ? 'flagged' : ''}`} onClick={e => handleFlag(issue.id, e)} disabled={flaggedIssues.has(issue.id)}>🚩</button>
+                                                {isAdmin && (
+                                                    <select value={issue.status} onChange={e => updateStatus(issue.id, e.target.value, e)} className="admin-select-inline" onClick={e => e.stopPropagation()}>
+                                                        <option>Nou</option><option>În lucru</option><option>În verificare</option><option>Rezolvat</option>
+                                                    </select>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
                     </div>
                 </div>
             </section>

@@ -6,7 +6,7 @@ import L from 'leaflet';
 import { useAuth } from '../context/AuthContext';
 
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon   from 'leaflet/dist/images/marker-icon.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -20,20 +20,20 @@ const SELECTED_ICON = L.divIcon({
 
 const CATEGORIES = [
     { value: 'Infrastructură', icon: '🛣️' },
-    { value: 'Iluminat',       icon: '💡' },
-    { value: 'Apă/Canal',      icon: '💧' },
-    { value: 'Spații verzi',   icon: '🌳' },
-    { value: 'Salubritate',    icon: '🗑️' },
+    { value: 'Iluminat', icon: '💡' },
+    { value: 'Apă/Canal', icon: '💧' },
+    { value: 'Spații verzi', icon: '🌳' },
+    { value: 'Salubritate', icon: '🗑️' },
     { value: 'Zgomot/Poluare', icon: '🔊' },
-    { value: 'Vandalism',      icon: '🚧' },
+    { value: 'Vandalism', icon: '🚧' },
     { value: 'Trafic/Parcare', icon: '🚗' },
-    { value: 'Altele',         icon: '📋' },
+    { value: 'Altele', icon: '📋' },
 ];
 const PRIORITIES = [
-    { value: 'Scăzută',  color: '#22c55e' },
-    { value: 'Medie',    color: '#eab308' },
+    { value: 'Scăzută', color: '#22c55e' },
+    { value: 'Medie', color: '#eab308' },
     { value: 'Ridicată', color: '#f97316' },
-    { value: 'Urgentă',  color: '#ef4444' },
+    { value: 'Urgentă', color: '#ef4444' },
 ];
 const GALATI_CENTER = [45.4353, 28.0080];
 
@@ -45,23 +45,23 @@ const MapPicker = ({ onPick, active }) => {
 
 export default function Navbar() {
     const { user, isAdmin, isAuthenticated, logout, displayName, avatarInitial } = useAuth();
-    const [menuOpen,   setMenuOpen]   = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [reportOpen, setReportOpen] = useState(false); // Panoul de raportare
-    const [step,       setStep]       = useState(1);     // 1=locație, 2=detalii, 3=succes
+    const [step, setStep] = useState(1);     // 1=locație, 2=detalii, 3=succes
 
     // Form state
-    const [form, setForm]           = useState({ title: '', description: '', category: 'Infrastructură', priority: 'Medie' });
-    const [location, setLocation]   = useState(null);
+    const [form, setForm] = useState({ title: '', description: '', category: 'Infrastructură', priority: 'Medie' });
+    const [location, setLocation] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [formErrors, setFormErrors] = useState({});
 
-    const menuRef   = useRef(null);
-    const panelRef  = useRef(null);
+    const menuRef = useRef(null);
+    const panelRef = useRef(null);
     const location_ = useLocation();
-    const navigate  = useNavigate();
-    const apiUrl    = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-    const useMock   = !import.meta.env.VITE_API_URL;
+    const navigate = useNavigate();
+    const apiUrl = (import.meta.env.VITE_API_URL || 'https://severin-bumbaru-2026.onrender.com/api').replace(/\/+$/, '');
+    const useMock = import.meta.env.VITE_USE_MOCK === 'true';
 
     // Închide dropdown la click afară
     useEffect(() => {
@@ -98,9 +98,9 @@ export default function Navbar() {
 
     const validate = () => {
         const errs = {};
-        if (!form.title.trim())       errs.title = 'Titlul este obligatoriu.';
+        if (!form.title.trim()) errs.title = 'Titlul este obligatoriu.';
         if (!form.description.trim()) errs.description = 'Descrierea este obligatorie.';
-        if (!location)                errs.location = 'Selectează locația pe hartă.';
+        if (!location) errs.location = 'Selectează locația pe hartă.';
         return errs;
     };
 
@@ -178,7 +178,7 @@ export default function Navbar() {
                                         {isAdmin && <span className="dropdown-role">⚙️ Administrator</span>}
                                     </div>
                                     <div className="dropdown-divider" />
-                                    <Link to="/profile"   className="dropdown-item" onClick={() => setMenuOpen(false)}>👤 Profilul meu</Link>
+                                    <Link to="/profile" className="dropdown-item" onClick={() => setMenuOpen(false)}>👤 Profilul meu</Link>
                                     <Link to="/my-issues" className="dropdown-item" onClick={() => setMenuOpen(false)}>📋 Sesizările mele</Link>
                                     {isAdmin && (
                                         <Link to="/admin" className="dropdown-item dropdown-item-admin" onClick={() => setMenuOpen(false)}>⚙️ Panou Admin</Link>
@@ -247,7 +247,7 @@ export default function Navbar() {
                             {reportOpen && (
                                 <MapContainer center={GALATI_CENTER} zoom={13} style={{ height: '100%', width: '100%' }}>
                                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                                    <MapPicker active={true} onPick={latlng => { setLocation(latlng); setFormErrors(e => ({...e, location: ''})); }} />
+                                    <MapPicker active={true} onPick={latlng => { setLocation(latlng); setFormErrors(e => ({ ...e, location: '' })); }} />
                                     {location && <Marker position={location} icon={SELECTED_ICON} />}
                                 </MapContainer>
                             )}
@@ -290,7 +290,7 @@ export default function Navbar() {
                                 type="text"
                                 placeholder="Ex: Groapă periculoasă pe strada Brăilei"
                                 value={form.title}
-                                onChange={e => { setForm(f => ({...f, title: e.target.value})); setFormErrors(fe => ({...fe, title: ''})); }}
+                                onChange={e => { setForm(f => ({ ...f, title: e.target.value })); setFormErrors(fe => ({ ...fe, title: '' })); }}
                                 maxLength={100}
                                 className={formErrors.title ? 'rp-input-err' : ''}
                                 autoFocus
@@ -307,7 +307,7 @@ export default function Navbar() {
                             <textarea
                                 placeholder="Descrie problema: ce, de când, riscuri..."
                                 value={form.description}
-                                onChange={e => { setForm(f => ({...f, description: e.target.value})); setFormErrors(fe => ({...fe, description: ''})); }}
+                                onChange={e => { setForm(f => ({ ...f, description: e.target.value })); setFormErrors(fe => ({ ...fe, description: '' })); }}
                                 rows={4}
                                 maxLength={500}
                                 className={formErrors.description ? 'rp-input-err' : ''}
@@ -324,7 +324,7 @@ export default function Navbar() {
                                         key={cat.value}
                                         type="button"
                                         className={`rp-cat-btn ${form.category === cat.value ? 'active' : ''}`}
-                                        onClick={() => setForm(f => ({...f, category: cat.value}))}
+                                        onClick={() => setForm(f => ({ ...f, category: cat.value }))}
                                         title={cat.value}
                                     >
                                         <span>{cat.icon}</span>
@@ -344,7 +344,7 @@ export default function Navbar() {
                                         type="button"
                                         className={`rp-prio-btn ${form.priority === p.value ? 'active' : ''}`}
                                         style={{ '--pc': p.color }}
-                                        onClick={() => setForm(f => ({...f, priority: p.value}))}
+                                        onClick={() => setForm(f => ({ ...f, priority: p.value }))}
                                     >
                                         <span className="rp-prio-dot" style={{ background: p.color }} />
                                         {p.value}
@@ -424,7 +424,7 @@ export default function Navbar() {
                                 <div key={i} className="rp-dot" style={{
                                     '--delay': `${i * 0.1}s`,
                                     '--x': `${Math.random() * 100}%`,
-                                    '--c': ['#3b82f6','#10b981','#f59e0b','#a855f7','#ef4444'][i % 5],
+                                    '--c': ['#3b82f6', '#10b981', '#f59e0b', '#a855f7', '#ef4444'][i % 5],
                                 }} />
                             ))}
                         </div>

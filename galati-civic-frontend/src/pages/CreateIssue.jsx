@@ -7,7 +7,7 @@ import L from 'leaflet';
 import { useAuth } from '../context/AuthContext';
 
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon   from 'leaflet/dist/images/marker-icon.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -25,29 +25,29 @@ const makeIcon = (color) => L.divIcon({
     iconAnchor: [13, 26],
     popupAnchor: [0, -30],
 });
-const NEW_ICON      = makeIcon('#ef4444');
+const NEW_ICON = makeIcon('#ef4444');
 const PROGRESS_ICON = makeIcon('#f59e0b');
-const DONE_ICON     = makeIcon('#10b981');
-const REVIEW_ICON   = makeIcon('#3b82f6');
+const DONE_ICON = makeIcon('#10b981');
+const REVIEW_ICON = makeIcon('#3b82f6');
 const SELECTED_ICON = makeIcon('#a855f7');
-const STATUS_ICONS  = { 'Nou': NEW_ICON, 'În lucru': PROGRESS_ICON, 'Rezolvat': DONE_ICON, 'În verificare': REVIEW_ICON };
+const STATUS_ICONS = { 'Nou': NEW_ICON, 'În lucru': PROGRESS_ICON, 'Rezolvat': DONE_ICON, 'În verificare': REVIEW_ICON };
 
 const CATEGORIES = [
     { value: 'Infrastructură', label: '🛣️ Infrastructură', desc: 'Drumuri, trotuare, poduri' },
-    { value: 'Iluminat',       label: '💡 Iluminat',       desc: 'Felinare, prize stradale' },
-    { value: 'Apă/Canal',      label: '💧 Apă/Canal',      desc: 'Scurgeri, inundații' },
-    { value: 'Spații verzi',   label: '🌳 Spații verzi',   desc: 'Parcuri, copaci, zone verzi' },
-    { value: 'Salubritate',    label: '🗑️ Salubritate',    desc: 'Deșeuri, curățenie' },
+    { value: 'Iluminat', label: '💡 Iluminat', desc: 'Felinare, prize stradale' },
+    { value: 'Apă/Canal', label: '💧 Apă/Canal', desc: 'Scurgeri, inundații' },
+    { value: 'Spații verzi', label: '🌳 Spații verzi', desc: 'Parcuri, copaci, zone verzi' },
+    { value: 'Salubritate', label: '🗑️ Salubritate', desc: 'Deșeuri, curățenie' },
     { value: 'Zgomot/Poluare', label: '🔊 Zgomot/Poluare', desc: 'Poluare fonică, aer, apă' },
-    { value: 'Vandalism',      label: '🚧 Vandalism',      desc: 'Graffiti, distrugeri proprietăți' },
+    { value: 'Vandalism', label: '🚧 Vandalism', desc: 'Graffiti, distrugeri proprietăți' },
     { value: 'Trafic/Parcare', label: '🚗 Trafic/Parcare', desc: 'Semafoare, parcări ilegale' },
-    { value: 'Altele',         label: '📋 Altele',          desc: 'Orice altă problemă urbană' },
+    { value: 'Altele', label: '📋 Altele', desc: 'Orice altă problemă urbană' },
 ];
 const PRIORITIES = [
-    { value: 'Scăzută',  color: '#22c55e', desc: 'Problemă minoră, nu urgentă' },
-    { value: 'Medie',    color: '#eab308', desc: 'Necesită atenție în timp util' },
+    { value: 'Scăzută', color: '#22c55e', desc: 'Problemă minoră, nu urgentă' },
+    { value: 'Medie', color: '#eab308', desc: 'Necesită atenție în timp util' },
     { value: 'Ridicată', color: '#f97316', desc: 'Problemă importantă, rezolvare rapidă' },
-    { value: 'Urgentă',  color: '#ef4444', desc: 'Pericol imediat, intervenție urgentă' },
+    { value: 'Urgentă', color: '#ef4444', desc: 'Pericol imediat, intervenție urgentă' },
 ];
 const GALATI_CENTER = [45.4353, 28.0080];
 
@@ -71,10 +71,10 @@ const Toast = ({ msg, show, type = 'info' }) => (
 
 const StatusBadge = ({ status }) => {
     const map = {
-        'Nou':           { cls: 'ci-badge-new',      label: '🔴 Nou' },
-        'În lucru':      { cls: 'ci-badge-progress', label: '🟡 În lucru' },
-        'Rezolvat':      { cls: 'ci-badge-done',     label: '🟢 Rezolvat' },
-        'În verificare': { cls: 'ci-badge-review',   label: '🔵 Verificare' },
+        'Nou': { cls: 'ci-badge-new', label: '🔴 Nou' },
+        'În lucru': { cls: 'ci-badge-progress', label: '🟡 În lucru' },
+        'Rezolvat': { cls: 'ci-badge-done', label: '🟢 Rezolvat' },
+        'În verificare': { cls: 'ci-badge-review', label: '🔵 Verificare' },
     };
     const b = map[status] || map['Nou'];
     return <span className={`ci-badge ${b.cls}`}>{b.label}</span>;
@@ -82,33 +82,33 @@ const StatusBadge = ({ status }) => {
 
 // ── Componenta principală ──
 const CreateIssue = () => {
-    const [tab, setTab]                     = useState('my');      // 'my' | 'new' | 'map'
-    const [step, setStep]                   = useState(1);
-    const [myIssues, setMyIssues]           = useState([]);
-    const [allIssues, setAllIssues]         = useState([]);
-    const [isLoading, setIsLoading]         = useState(true);
-    const [votedIssues, setVotedIssues]     = useState(new Set());
+    const [tab, setTab] = useState('my');      // 'my' | 'new' | 'map'
+    const [step, setStep] = useState(1);
+    const [myIssues, setMyIssues] = useState([]);
+    const [allIssues, setAllIssues] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [votedIssues, setVotedIssues] = useState(new Set());
     const [selectedIssue, setSelectedIssue] = useState(null);
-    const [editingIssue, setEditingIssue]   = useState(null);
+    const [editingIssue, setEditingIssue] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [pickingLocation, setPickingLocation] = useState(false);
-    const [toast, setToast]                 = useState({ msg: '', show: false, type: 'info' });
-    const [mapCenter, setMapCenter]         = useState(GALATI_CENTER);
-    const [mapSearch, setMapSearch]         = useState('');
-    const [mapFilter, setMapFilter]         = useState('Toate');
+    const [toast, setToast] = useState({ msg: '', show: false, type: 'info' });
+    const [mapCenter, setMapCenter] = useState(GALATI_CENTER);
+    const [mapSearch, setMapSearch] = useState('');
+    const [mapFilter, setMapFilter] = useState('Toate');
 
     const [form, setForm] = useState({
         title: '', description: '', category: 'Infrastructură',
         priority: 'Medie', lat: null, lng: null,
     });
-    const [formErrors, setFormErrors]   = useState({});
-    const [submitting, setSubmitting]   = useState(false);
+    const [formErrors, setFormErrors] = useState({});
+    const [submitting, setSubmitting] = useState(false);
     const [editLocation, setEditLocation] = useState(null);
 
     const { user } = useAuth();
-    const navigate  = useNavigate();
-    const apiUrl    = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-    const useMock   = !import.meta.env.VITE_API_URL;
+    const navigate = useNavigate();
+    const apiUrl = (import.meta.env.VITE_API_URL || 'https://severin-bumbaru-2026.onrender.com/api').replace(/\/+$/, '');
+    const useMock = import.meta.env.VITE_USE_MOCK === 'true';
 
     const showToast = useCallback((msg, type = 'info') => {
         setToast({ msg, show: true, type });
@@ -148,10 +148,10 @@ const CreateIssue = () => {
     // ── Validare formular ──
     const validate = () => {
         const errs = {};
-        if (!form.title.trim())       errs.title = 'Titlul este obligatoriu.';
-        if (form.title.length > 100)  errs.title = 'Max 100 caractere.';
+        if (!form.title.trim()) errs.title = 'Titlul este obligatoriu.';
+        if (form.title.length > 100) errs.title = 'Max 100 caractere.';
         if (!form.description.trim()) errs.description = 'Descrierea este obligatorie.';
-        if (!form.lat || !form.lng)   errs.location = 'Selectează locația pe hartă.';
+        if (!form.lat || !form.lng) errs.location = 'Selectează locația pe hartă.';
         return errs;
     };
 
@@ -649,7 +649,7 @@ const CreateIssue = () => {
                             <div className="ci-map-container">
                                 <MapContainer center={GALATI_CENTER} zoom={13} style={{ height: '100%', width: '100%' }}>
                                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
-                                    <MapPicker editMode={false} onPick={() => {}} />
+                                    <MapPicker editMode={false} onPick={() => { }} />
                                     {filteredForMap.map(issue => (
                                         <Marker
                                             key={issue.id}
