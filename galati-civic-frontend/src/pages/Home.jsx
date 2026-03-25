@@ -106,7 +106,7 @@ const Home = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [urgentBannerClosed, setUrgentBannerClosed] = useState(false);
 
-    const { user } = useAuth();
+    const { user, getToken } = useAuth();
     const apiUrl = (import.meta.env.VITE_API_URL || 'https://severin-bumbaru-2026.onrender.com/api').replace(/\/+$/, '');
     const isAdmin = user?.role === 'admin' || user?.email === 'admin@galati.ro';
     const useMock = import.meta.env.VITE_USE_MOCK === 'true';
@@ -221,7 +221,12 @@ const Home = () => {
                 await new Promise(r => setTimeout(r, 700));
                 setIssues(prev => [newIssue, ...prev]);
             } else {
-                await axios.post(`${apiUrl}/issues`, newIssue, { headers: { Authorization: `Bearer ${user.token}` } });
+                const token = (await getToken?.()) || user?.token;
+                await axios.post(
+                    `${apiUrl}/issues`,
+                    { ...newIssue, user_id: user?.id ?? null },
+                    token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
+                );
                 fetchIssues();
             }
             setNewLocation(null);

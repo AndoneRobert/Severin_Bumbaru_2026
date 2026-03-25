@@ -105,7 +105,7 @@ const CreateIssue = () => {
     const [submitting, setSubmitting] = useState(false);
     const [editLocation, setEditLocation] = useState(null);
 
-    const { user } = useAuth();
+    const { user, getToken } = useAuth();
     const navigate = useNavigate();
     const apiUrl = (import.meta.env.VITE_API_URL || 'https://severin-bumbaru-2026.onrender.com/api').replace(/\/+$/, '');
     const useMock = import.meta.env.VITE_USE_MOCK === 'true';
@@ -173,7 +173,12 @@ const CreateIssue = () => {
                 setStep(1);
                 setTab('my');
             } else {
-                await axios.post(`${apiUrl}/issues`, payload, { headers: { Authorization: `Bearer ${user.token}` } });
+                const token = (await getToken?.()) || user?.token;
+                await axios.post(
+                    `${apiUrl}/issues`,
+                    { ...payload, user_id: user?.id ?? null },
+                    token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
+                );
                 showToast('Sesizare trimisă! ✓', 'success');
                 setTab('my');
             }
