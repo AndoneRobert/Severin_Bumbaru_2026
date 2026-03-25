@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
@@ -18,22 +19,42 @@ function MyReports() {
   const { user }    = useAuth()
   const navigate    = useNavigate()
   const [reports, setReports]       = useState([])
-  const [loading, setLoading]       = useState(true)
+  const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState('')
   const [filter, setFilter]         = useState('all')
-  const [confirmId, setConfirmId]   = useState(null)   // ID sesizare de șters
+  const [confirmId, setConfirmId]   = useState(null)
   const [deleting, setDeleting]     = useState(false)
 
-  useEffect(() => { if (user?.id) fetchReports() }, [user?.id])
+  useEffect(() => {
+    if (!user?.id) return
+    fetchReports()
+  }, [user?.id])
 
   async function fetchReports() {
+    console.log('fetchReports START, user.id:', user?.id)
     setLoading(true)
+    setError('')
+
+    let done = false
+    const timer = setTimeout(() => {
+      console.log('fetchReports TIMEOUT after 8s')
+      if (!done) {
+        done = true
+        setError('Serverul nu răspunde. Verifică conexiunea la internet.')
+        setLoading(false)
+      }
+    }, 8000)
+
     try {
       const { data, error } = await supabase
         .from('reports')
         .select('*, categories(name)')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
+
+      if (done) return
+      done = true
+      clearTimeout(timer)
 
       if (error) {
         setError(error.message.includes('does not exist') ? 'db_missing' : error.message)
@@ -41,9 +62,12 @@ function MyReports() {
         setReports(data ?? [])
       }
     } catch (e) {
-      setError('Nu s-a putut conecta la server. Verifică conexiunea.')
-      console.error('fetchReports error:', e)
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      setError('Eroare: ' + e.message)
     } finally {
+      if (!done) { done = true; clearTimeout(timer) }
       setLoading(false)
     }
   }
@@ -108,8 +132,8 @@ function MyReports() {
           </div>
         )}
 
-        {/* MODAL CONFIRMARE ȘTERGERE */}
-        {confirmId && (
+        {/* MODAL CONFIRMARE ȘTERGERE — randat direct pe body ca să nu fie afectat de container */}
+        {confirmId && createPortal(
           <div className="confirm-overlay">
             <div className="confirm-modal">
               <div className="confirm-modal__icon">🗑️</div>
@@ -129,7 +153,8 @@ function MyReports() {
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {filtered.length === 0 && !error ? (

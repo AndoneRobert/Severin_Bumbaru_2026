@@ -41,7 +41,7 @@ function AdminDashboard() {
     setLoading(true)
     const { data, error } = await supabase
       .from('reports')
-      .select('*, categories(name), profiles(full_name)')
+      .select('*, categories(name), profiles!reports_user_id_fkey(full_name)')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -67,6 +67,17 @@ function AdminDashboard() {
       setReports(prev =>
         prev.map(r => r.id === reportId ? { ...r, status: newStatus } : r)
       )
+      // Trimite notificare proprietarului sesizării
+      const report = reports.find(r => r.id === reportId)
+      if (report) {
+        const statusLabels = { in_progress: 'În lucru', resolved: 'Rezolvată', rejected: 'Respinsă' }
+        await supabase.from('notifications').insert({
+          user_id:   report.user_id,
+          report_id: reportId,
+          type:      'status_change',
+          message:   `Sesizarea ta „${report.title}" a fost marcată ca ${statusLabels[newStatus] ?? newStatus}.`,
+        })
+      }
     }
     setUpdating(null)
   }
@@ -89,6 +100,16 @@ function AdminDashboard() {
       })
 
     if (!error) {
+      // Notificare pentru proprietarul sesizării
+      const report = reports.find(r => r.id === reportId)
+      if (report) {
+        await supabase.from('notifications').insert({
+          user_id:   report.user_id,
+          report_id: reportId,
+          type:      'comment',
+          message:   `Primăria a răspuns la sesizarea ta „${report.title}".`,
+        })
+      }
       setCommentOpen(null)
       setCommentText('')
     }
