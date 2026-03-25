@@ -49,14 +49,25 @@ function MyReports() {
     }
   }, [user?.id])
 
-  async function fetchReports(controller) {
+  async function fetchReports() {
+    console.log('fetchReports START, user.id:', user?.id)
     setLoading(true)
     setError('')
+
+    let done = false
+    const timer = setTimeout(() => {
+      console.log('fetchReports TIMEOUT after 8s')
+      if (!done) {
+        done = true
+        setError('Serverul nu răspunde. Verifică conexiunea la internet.')
+        setLoading(false)
+      }
+    }, 8000)
 
     try {
       const reportsPromise = supabase
         .from('reports')
-        .select('id, category_id, title, address, image_url, status, created_at')
+        .select('*, categories(name)')
         .eq('user_id', user.id)
         .abortSignal(controller.signal)
         .order('created_at', { ascending: false })
