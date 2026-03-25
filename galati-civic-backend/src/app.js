@@ -6,16 +6,18 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 
 // Middleware globale
-app.use(cors()); // Permite frontend-ului să acceseze API-ul
-app.use(express.json()); // Permite citirea JSON din request body
+app.use(cors());
+app.use(express.json());
 
-// Supabase client cu cheia service_role (backend securizat)
+// Supabase client (folosind cheia secretă, backend securizat)
 const supabase = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_KEY
 );
 
+// -------------------------
 // RUTA DE TEST / HEALTH CHECK
+// -------------------------
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
@@ -24,7 +26,9 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// -------------------------
 // GET toate raportările (issues)
+// -------------------------
 app.get('/api/raport', async (req, res) => {
     try {
         const { data, error } = await supabase.from('issues').select('*');
@@ -36,15 +40,24 @@ app.get('/api/raport', async (req, res) => {
     }
 });
 
+// -------------------------
 // POST creare raport nou
+// -------------------------
 app.post('/api/raport', async (req, res) => {
-    const { category, description, location_lat, location_lng } = req.body;
+    const { title, description, latitude, longitude, category_id } = req.body;
+
+    // Validare minimală
+    if (!title) {
+        return res.status(400).json({ error: 'Title este obligatoriu.' });
+    }
+
     try {
         const { data, error } = await supabase.from('issues').insert([{
-            category,
+            title,
             description,
-            location_lat,
-            location_lng,
+            latitude,
+            longitude,
+            category_id,
             status: 'pending'
         }]);
         if (error) throw error;
@@ -55,12 +68,21 @@ app.post('/api/raport', async (req, res) => {
     }
 });
 
+// -------------------------
 // PUT update status (doar admin)
+// -------------------------
 app.put('/api/raport/:id', async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
+
+    if (!status) {
+        return res.status(400).json({ error: 'Status este obligatoriu.' });
+    }
+
     try {
-        const { data, error } = await supabase.from('issues').update({ status }).eq('id', id);
+        const { data, error } = await supabase.from('issues')
+            .update({ status })
+            .eq('id', id);
         if (error) throw error;
         res.json(data);
     } catch (err) {
@@ -69,12 +91,16 @@ app.put('/api/raport/:id', async (req, res) => {
     }
 });
 
+// -------------------------
 // Middleware pentru rute inexistente (404)
+// -------------------------
 app.use((req, res) => {
     res.status(404).json({ error: 'Ruta nu a fost găsită.' });
 });
 
-// Middleware global de erori
+// -------------------------
+// Middleware global pentru erori
+// -------------------------
 app.use((err, req, res, next) => {
     console.error('[GLOBAL ERROR]:', err.stack);
     res.status(500).json({ error: 'Eroare internă pe server.' });
