@@ -5,55 +5,69 @@ import './InnerPage.css'
 import './AdminDashboard.css'
 
 const STATUS_MAP = {
-  new:         { label: 'Nouă',       cls: 'badge-new'      },
-  in_progress: { label: 'În lucru',   cls: 'badge-progress' },
-  resolved:    { label: 'Rezolvată',  cls: 'badge-resolved' },
-  rejected:    { label: 'Respinsă',   cls: 'badge-rejected' },
+  new: { label: 'Nouă', cls: 'badge-new' },
+  in_progress: { label: 'În lucru', cls: 'badge-progress' },
+  resolved: { label: 'Rezolvată', cls: 'badge-resolved' },
+  rejected: { label: 'Respinsă', cls: 'badge-rejected' },
 }
 
 const NEXT_STATUS = {
-  new:         'in_progress',
+  new: 'in_progress',
   in_progress: 'resolved',
-  resolved:    null,
-  rejected:    null,
+  resolved: null,
+  rejected: null,
 }
 
 const NEXT_LABEL = {
-  new:         '▶ Marchează În lucru',
+  new: '▶ Marchează În lucru',
   in_progress: '✅ Marchează Rezolvată',
 }
 
 function AdminDashboard() {
-  const { user }          = useAuth()
-  const [reports, setReports]   = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState('')
+  const { user } = useAuth()
+  const [reports, setReports] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [updating, setUpdating] = useState(null)   // ID-ul sesizării în curs de update
   const [commentOpen, setCommentOpen] = useState(null)
   const [commentText, setCommentText] = useState('')
 
   useEffect(() => {
-    fetchReports()
+    const controller = new AbortController()
+    fetchReports(controller)
+    return () => controller.abort()
   }, [])
 
-  async function fetchReports() {
+  async function fetchReports(controller = new AbortController()) {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('reports')
-      .select('*, categories(name), profiles!reports_user_id_fkey(full_name)')
-      .order('created_at', { ascending: false })
+    setError('')
 
-    if (error) {
-      setError(
-        error.message.includes('does not exist')
-          ? 'db_missing'
-          : error.message
-      )
-    } else {
-      setReports(data)
+    const timer = setTimeout(() => controller.abort(), 8000)
+
+    try {
+      const { data, error } = await supabase
+        .from('reports')
+        .select('*, categories(name), profiles!reports_user_id_fkey(full_name)')
+        .order('created_at', { ascending: false })
+        .abortSignal(controller.signal)
+
+      if (error) {
+        setError(
+          error.message.includes('does not exist')
+            ? 'db_missing'
+            : error.message
+        )
+      } else {
+        setReports(data ?? [])
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') setError('Timeout: serverul nu răspunde în 8 secunde.')
+      else setError(e?.message ?? 'Eroare la încărcare.')
+    } finally {
+      clearTimeout(timer)
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   async function handleStatusChange(reportId, newStatus) {
@@ -72,10 +86,10 @@ function AdminDashboard() {
       if (report) {
         const statusLabels = { in_progress: 'În lucru', resolved: 'Rezolvată', rejected: 'Respinsă' }
         await supabase.from('notifications').insert({
-          user_id:   report.user_id,
+          user_id: report.user_id,
           report_id: reportId,
-          type:      'status_change',
-          message:   `Sesizarea ta „${report.title}" a fost marcată ca ${statusLabels[newStatus] ?? newStatus}.`,
+          type: 'status_change',
+          message: `Sesizarea ta „${report.title}" a fost marcată ca ${statusLabels[newStatus] ?? newStatus}.`,
         })
       }
     }
@@ -94,8 +108,8 @@ function AdminDashboard() {
       .from('comments')
       .insert({
         report_id: reportId,
-        admin_id:  user.id,
-        content:   commentText.trim(),
+        admin_id: user.id,
+        content: commentText.trim(),
         is_public: true,
       })
 
@@ -104,10 +118,10 @@ function AdminDashboard() {
       const report = reports.find(r => r.id === reportId)
       if (report) {
         await supabase.from('notifications').insert({
-          user_id:   report.user_id,
+          user_id: report.user_id,
           report_id: reportId,
-          type:      'comment',
-          message:   `Primăria a răspuns la sesizarea ta „${report.title}".`,
+          type: 'comment',
+          message: `Primăria a răspuns la sesizarea ta „${report.title}".`,
         })
       }
       setCommentOpen(null)
@@ -121,11 +135,11 @@ function AdminDashboard() {
     : reports.filter(r => r.status === filterStatus)
 
   const counts = {
-    all:         reports.length,
-    new:         reports.filter(r => r.status === 'new').length,
+    all: reports.length,
+    new: reports.filter(r => r.status === 'new').length,
     in_progress: reports.filter(r => r.status === 'in_progress').length,
-    resolved:    reports.filter(r => r.status === 'resolved').length,
-    rejected:    reports.filter(r => r.status === 'rejected').length,
+    resolved: reports.filter(r => r.status === 'resolved').length,
+    rejected: reports.filter(r => r.status === 'rejected').length,
   }
 
   if (loading) {
@@ -163,10 +177,10 @@ function AdminDashboard() {
         {/* STATS CARDS */}
         <div className="admin__stats">
           {[
-            { key: 'new',         label: 'Noi',       color: '#3b82f6', icon: '🔵' },
-            { key: 'in_progress', label: 'În lucru',  color: '#f59e0b', icon: '🟡' },
-            { key: 'resolved',    label: 'Rezolvate', color: '#10b981', icon: '🟢' },
-            { key: 'rejected',    label: 'Respinse',  color: '#ef4444', icon: '🔴' },
+            { key: 'new', label: 'Noi', color: '#3b82f6', icon: '🔵' },
+            { key: 'in_progress', label: 'În lucru', color: '#f59e0b', icon: '🟡' },
+            { key: 'resolved', label: 'Rezolvate', color: '#10b981', icon: '🟢' },
+            { key: 'rejected', label: 'Respinse', color: '#ef4444', icon: '🔴' },
           ].map(s => (
             <div key={s.key} className="admin-stat" style={{ '--stat-color': s.color }}>
               <span className="admin-stat__icon">{s.icon}</span>
@@ -213,7 +227,7 @@ function AdminDashboard() {
               </thead>
               <tbody>
                 {filtered.map(report => {
-                  const s    = STATUS_MAP[report.status]
+                  const s = STATUS_MAP[report.status]
                   const next = NEXT_STATUS[report.status]
                   const date = new Date(report.created_at).toLocaleDateString('ro-RO')
                   const isUpdating = updating === report.id

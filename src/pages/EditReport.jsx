@@ -6,53 +6,68 @@ import './InnerPage.css'
 import './NewReport.css'
 
 const CATEGORIES = [
-  { id: 1, name: 'Drumuri & Asfalt',  icon: '🚧' },
-  { id: 2, name: 'Iluminat Stradal',  icon: '💡' },
-  { id: 3, name: 'Salubritate',       icon: '🗑️' },
-  { id: 4, name: 'Spații Verzi',      icon: '🌳' },
-  { id: 5, name: 'Apă & Canalizare',  icon: '🚰' },
-  { id: 6, name: 'Transport Public',  icon: '🚌' },
+  { id: 1, name: 'Drumuri & Asfalt', icon: '🚧' },
+  { id: 2, name: 'Iluminat Stradal', icon: '💡' },
+  { id: 3, name: 'Salubritate', icon: '🗑️' },
+  { id: 4, name: 'Spații Verzi', icon: '🌳' },
+  { id: 5, name: 'Apă & Canalizare', icon: '🚰' },
+  { id: 6, name: 'Transport Public', icon: '🚌' },
 ]
 
 function EditReport() {
-  const { id }   = useParams()
+  const { id } = useParams()
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  const [form, setForm]       = useState({ title:'', description:'', category_id:'', address:'' })
-  const [image, setImage]     = useState(null)
+  const [form, setForm] = useState({ title: '', description: '', category_id: '', address: '' })
+  const [image, setImage] = useState(null)
   const [preview, setPreview] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving]   = useState(false)
-  const [error, setError]     = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 8000)
+
     async function fetchReport() {
-      const { data, error } = await supabase
-        .from('reports')
-        .select('*')
-        .eq('id', id)
-        .single()
+      try {
+        const { data, error } = await supabase
+          .from('reports')
+          .select('*')
+          .eq('id', id)
+          .abortSignal(controller.signal)
+          .single()
 
-      if (error || !data) { navigate('/my-reports'); return }
+        if (error || !data) { navigate('/my-reports'); return }
 
-      // Numai owner-ul poate edita
-      if (data.user_id !== user.id) { navigate('/my-reports'); return }
+        // Numai owner-ul poate edita
+        if (data.user_id !== user.id) { navigate('/my-reports'); return }
 
-      // Numai sesizările noi pot fi editate
-      if (data.status !== 'new') { navigate(`/report/${id}`); return }
+        // Numai sesizările noi pot fi editate
+        if (data.status !== 'new') { navigate(`/report/${id}`); return }
 
-      setForm({
-        title:       data.title,
-        description: data.description,
-        category_id: String(data.category_id),
-        address:     data.address,
-      })
-      if (data.image_url) setPreview(data.image_url)
-      setLoading(false)
+        setForm({
+          title: data.title,
+          description: data.description,
+          category_id: String(data.category_id),
+          address: data.address,
+        })
+        if (data.image_url) setPreview(data.image_url)
+      } catch (e) {
+        if (e.name === 'AbortError') setError('Timeout: serverul nu răspunde în 8 secunde.')
+        else setError(e?.message ?? 'Eroare la încărcare.')
+      } finally {
+        clearTimeout(timer)
+        setLoading(false)
+      }
     }
 
     fetchReport()
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
   }, [id, user.id, navigate])
 
   function handleChange(e) {
@@ -77,7 +92,7 @@ function EditReport() {
       let image_url = undefined   // undefined = nu schimbăm câmpul
 
       if (image) {
-        const ext      = image.name.split('.').pop()
+        const ext = image.name.split('.').pop()
         const fileName = `${user.id}/${Date.now()}.${ext}`
         const { error: uploadError } = await supabase.storage
           .from('report-images').upload(fileName, image)
@@ -88,11 +103,11 @@ function EditReport() {
       }
 
       const update = {
-        title:       form.title,
+        title: form.title,
         description: form.description,
         category_id: Number(form.category_id),
-        address:     form.address,
-        updated_at:  new Date().toISOString(),
+        address: form.address,
+        updated_at: new Date().toISOString(),
         ...(image_url !== undefined && { image_url }),
       }
 
@@ -146,7 +161,7 @@ function EditReport() {
                   <label key={cat.id}
                     className={`category-option ${form.category_id == cat.id ? 'selected' : ''}`}>
                     <input type="radio" name="category_id" value={cat.id}
-                      onChange={handleChange} style={{ display:'none' }} />
+                      onChange={handleChange} style={{ display: 'none' }} />
                     <span className="category-option__icon">{cat.icon}</span>
                     <span className="category-option__label">{cat.name}</span>
                   </label>
@@ -169,7 +184,7 @@ function EditReport() {
               <label className="form-label" htmlFor="description">Descriere *</label>
               <textarea id="description" name="description" className="form-input"
                 value={form.description} onChange={handleChange}
-                rows={4} required style={{ resize:'vertical', minHeight:100 }} />
+                rows={4} required style={{ resize: 'vertical', minHeight: 100 }} />
             </div>
 
             {/* ADRESĂ */}
@@ -183,7 +198,7 @@ function EditReport() {
             <div className="form-group">
               <label className="form-label">Fotografie</label>
               <label className={`file-upload ${preview ? 'file-upload--has-file' : ''}`}>
-                <input type="file" accept="image/*" onChange={handleImage} style={{ display:'none' }} />
+                <input type="file" accept="image/*" onChange={handleImage} style={{ display: 'none' }} />
                 {preview ? (
                   <div className="file-upload__preview">
                     <img src={preview} alt="Preview" />
@@ -199,13 +214,13 @@ function EditReport() {
               </label>
             </div>
 
-            <div style={{ display:'flex', gap:10 }}>
+            <div style={{ display: 'flex', gap: 10 }}>
               <button type="button" className="btn btn-ghost"
-                onClick={() => navigate(-1)} style={{ flex:1, justifyContent:'center' }}>
+                onClick={() => navigate(-1)} style={{ flex: 1, justifyContent: 'center' }}>
                 Anulează
               </button>
               <button type="submit" className="btn btn-primary"
-                style={{ flex:2, justifyContent:'center' }} disabled={saving || !isValid}>
+                style={{ flex: 2, justifyContent: 'center' }} disabled={saving || !isValid}>
                 {saving ? '⏳ Se salvează...' : '💾 Salvează modificările'}
               </button>
             </div>

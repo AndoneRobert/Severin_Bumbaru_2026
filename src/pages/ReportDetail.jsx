@@ -7,27 +7,27 @@ import './InnerPage.css'
 import './ReportDetail.css'
 
 const STATUS_MAP = {
-  new:         { label: 'Nouă',       cls: 'badge-new',      color: '#3b82f6' },
-  in_progress: { label: 'În lucru',   cls: 'badge-progress', color: '#f59e0b' },
-  resolved:    { label: 'Rezolvată',  cls: 'badge-resolved', color: '#10b981' },
-  rejected:    { label: 'Respinsă',   cls: 'badge-rejected', color: '#ef4444' },
+  new: { label: 'Nouă', cls: 'badge-new', color: '#3b82f6' },
+  in_progress: { label: 'În lucru', cls: 'badge-progress', color: '#f59e0b' },
+  resolved: { label: 'Rezolvată', cls: 'badge-resolved', color: '#10b981' },
+  rejected: { label: 'Respinsă', cls: 'badge-rejected', color: '#ef4444' },
 }
 
 const STATUS_STEPS = ['new', 'in_progress', 'resolved']
 
 function ReportDetail() {
-  const { id }         = useParams()
-  const navigate       = useNavigate()
-  const { user }       = useAuth()
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const { user } = useAuth()
 
-  const [report, setReport]           = useState(null)
-  const [comments, setComments]       = useState([])
-  const [loading, setLoading]         = useState(true)
-  const [error, setError]             = useState('')
+  const [report, setReport] = useState(null)
+  const [comments, setComments] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
-  const [votesCount, setVotesCount]   = useState(0)
-  const [hasVoted, setHasVoted]       = useState(false)
-  const [voting, setVoting]           = useState(false)
+  const [votesCount, setVotesCount] = useState(0)
+  const [hasVoted, setHasVoted] = useState(false)
+  const [voting, setVoting] = useState(false)
 
   async function handleVote() {
     if (!user || voting) return
@@ -53,58 +53,74 @@ function ReportDetail() {
   }
 
   useEffect(() => {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 8000)
+
     async function fetchData() {
       setLoading(true)
 
-      // Fetch sesizarea
-      const { data: reportData, error: rErr } = await supabase
-        .from('reports')
-        .select('*, categories(name), profiles!reports_user_id_fkey(full_name)')
-        .eq('id', id)
-        .single()
+      setError('')
+      try {
+        // Fetch sesizarea
+        const { data: reportData, error: rErr } = await supabase
+          .from('reports')
+          .select('*, categories(name), profiles!reports_user_id_fkey(full_name)')
+          .eq('id', id)
+          .abortSignal(controller.signal)
+          .single()
 
-      if (rErr) {
-        setError(
-          rErr.message.includes('does not exist')
-            ? 'db_missing'
-            : rErr.code === 'PGRST116'
-              ? 'Sesizarea nu a fost găsită.'
-              : rErr.message
-        )
-        setLoading(false)
-        return
-      }
+        if (rErr) {
+          setError(
+            rErr.message.includes('does not exist')
+              ? 'db_missing'
+              : rErr.code === 'PGRST116'
+                ? 'Sesizarea nu a fost găsită.'
+                : rErr.message
+          )
+          return
+        }
 
-      setReport(reportData)
-      setVotesCount(reportData.votes_count ?? 0)
+        setReport(reportData)
+        setVotesCount(reportData.votes_count ?? 0)
 
-      // Fetch comentariile publice
-      const { data: commentsData } = await supabase
-        .from('comments')
-        .select('*, profiles!comments_admin_id_fkey(full_name)')
-        .eq('report_id', id)
-        .eq('is_public', true)
-        .order('created_at', { ascending: true })
-
-      setComments(commentsData ?? [])
-
-      // Verifică dacă userul curent a votat
-      if (user) {
-        const { data: voteData } = await supabase
-          .from('report_votes')
-          .select('user_id')
+        // Fetch comentariile publice
+        const { data: commentsData } = await supabase
+          .from('comments')
+          .select('*, profiles!comments_admin_id_fkey(full_name)')
           .eq('report_id', id)
-          .eq('user_id', user.id)
-          .maybeSingle()
-        setHasVoted(!!voteData)
+          .eq('is_public', true)
+          .order('created_at', { ascending: true })
+          .abortSignal(controller.signal)
+
+        setComments(commentsData ?? [])
+
+        // Verifică dacă userul curent a votat
+        if (user) {
+          const { data: voteData } = await supabase
+            .from('report_votes')
+            .select('user_id')
+            .eq('report_id', id)
+            .eq('user_id', user.id)
+            .abortSignal(controller.signal)
+            .maybeSingle()
+          setHasVoted(!!voteData)
+        }
+      } catch (e) {
+        if (e.name === 'AbortError') setError('Timeout: serverul nu răspunde în 8 secunde.')
+        else setError(e?.message ?? 'Eroare la încărcare.')
+      } finally {
+        clearTimeout(timer)
+        setLoading(false)
       }
 
-      setLoading(false)
     }
 
     fetchData()
-  }, [id])
-
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [id, user])
   if (loading) {
     return (
       <div className="inner-page">
@@ -145,7 +161,7 @@ function ReportDetail() {
     )
   }
 
-  const s    = STATUS_MAP[report.status] ?? STATUS_MAP.new
+  const s = STATUS_MAP[report.status] ?? STATUS_MAP.new
   const date = new Date(report.created_at).toLocaleDateString('ro-RO', {
     day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
   })
@@ -201,9 +217,9 @@ function ReportDetail() {
                 <h3>Stadiul sesizării</h3>
                 <div className="progress-steps">
                   {STATUS_STEPS.map((step, i) => {
-                    const done    = i <= stepIndex
+                    const done = i <= stepIndex
                     const current = i === stepIndex
-                    const st      = STATUS_MAP[step]
+                    const st = STATUS_MAP[step]
                     return (
                       <div key={step} className={`progress-step ${done ? 'done' : ''} ${current ? 'current' : ''}`}>
                         <div className="progress-step__circle" style={{ background: done ? st.color : undefined }}>
@@ -300,26 +316,26 @@ function ReportDetail() {
 
             {/* Acțiuni owner */}
             {user && user.id === report.user_id && (
-              <div className="card" style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                <p style={{ fontSize:'0.85rem', color:'var(--text-muted)' }}>
+              <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                   Aceasta este sesizarea ta.
                 </p>
                 {report.status === 'new' && (
                   <Link to={`/report/${report.id}/edit`}
                     className="btn btn-outline"
-                    style={{ width:'100%', justifyContent:'center' }}>
+                    style={{ width: '100%', justifyContent: 'center' }}>
                     ✏️ Editează sesizarea
                   </Link>
                 )}
                 <button
                   className="btn btn-sm"
-                  style={{ background:'#fee2e2', color:'#991b1b', border:'1px solid #fecaca', justifyContent:'center' }}
+                  style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca', justifyContent: 'center' }}
                   onClick={() => setShowConfirm(true)}
                 >
                   🗑️ Șterge sesizarea
                 </button>
                 <Link to="/my-reports" className="btn btn-ghost btn-sm"
-                  style={{ justifyContent:'center' }}>
+                  style={{ justifyContent: 'center' }}>
                   ← Sesizările mele
                 </Link>
               </div>
@@ -337,7 +353,7 @@ function ReportDetail() {
                       Anulează
                     </button>
                     <button className="btn"
-                      style={{ background:'#ef4444', color:'#fff' }}
+                      style={{ background: '#ef4444', color: '#fff' }}
                       onClick={handleDelete}>
                       Da, șterge
                     </button>

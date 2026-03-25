@@ -33,8 +33,7 @@ function MyReports() {
 
     const timer = setTimeout(() => {
       if (mounted) {
-        setError('Timeout: serverul nu răspunde în 8 secunde.')
-        setLoading(false)
+        controller.abort()
       }
     }, 8000)
 
@@ -65,6 +64,7 @@ function MyReports() {
       const categoriesPromise = supabase
         .from('categories')
         .select('id, name')
+        .abortSignal(controller.signal)
 
       const [reportsRes, categoriesRes] = await Promise.all([reportsPromise, categoriesPromise])
 
@@ -88,7 +88,10 @@ function MyReports() {
 
       setReports(rows)
     } catch (e) {
-      if (e.name === 'AbortError') return
+      if (e.name === 'AbortError') {
+        setError('Timeout: serverul nu răspunde în 8 secunde.')
+        return
+      }
       const msg = e?.message ?? e
       setError(`Fetch error: ${msg}`)
     }
