@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
@@ -19,11 +20,32 @@ function ReportDetail() {
   const navigate       = useNavigate()
   const { user }       = useAuth()
 
-  const [report, setReport]       = useState(null)
-  const [comments, setComments]   = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [error, setError]         = useState('')
+  const [report, setReport]           = useState(null)
+  const [comments, setComments]       = useState([])
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
+  const [votesCount, setVotesCount]   = useState(0)
+  const [hasVoted, setHasVoted]       = useState(false)
+  const [voting, setVoting]           = useState(false)
+
+  async function handleVote() {
+    if (!user || voting) return
+    setVoting(true)
+    if (hasVoted) {
+      await supabase.from('report_votes').delete()
+        .eq('report_id', id).eq('user_id', user.id)
+      await supabase.from('reports').update({ votes_count: votesCount - 1 }).eq('id', id)
+      setVotesCount(v => v - 1)
+      setHasVoted(false)
+    } else {
+      await supabase.from('report_votes').insert({ report_id: Number(id), user_id: user.id })
+      await supabase.from('reports').update({ votes_count: votesCount + 1 }).eq('id', id)
+      setVotesCount(v => v + 1)
+      setHasVoted(true)
+    }
+    setVoting(false)
+  }
 
   async function handleDelete() {
     const { error } = await supabase.from('reports').delete().eq('id', id)
@@ -37,7 +59,7 @@ function ReportDetail() {
       // Fetch sesizarea
       const { data: reportData, error: rErr } = await supabase
         .from('reports')
-        .select('*, categories(name), profiles(full_name)')
+        .select('*, categories(name), profiles!reports_user_id_fkey(full_name)')
         .eq('id', id)
         .single()
 
@@ -54,16 +76,29 @@ function ReportDetail() {
       }
 
       setReport(reportData)
+      setVotesCount(reportData.votes_count ?? 0)
 
       // Fetch comentariile publice
       const { data: commentsData } = await supabase
         .from('comments')
-        .select('*, profiles(full_name)')
+        .select('*, profiles!comments_admin_id_fkey(full_name)')
         .eq('report_id', id)
         .eq('is_public', true)
         .order('created_at', { ascending: true })
 
       setComments(commentsData ?? [])
+
+      // Verifică dacă userul curent a votat
+      if (user) {
+        const { data: voteData } = await supabase
+          .from('report_votes')
+          .select('user_id')
+          .eq('report_id', id)
+          .eq('user_id', user.id)
+          .maybeSingle()
+        setHasVoted(!!voteData)
+      }
+
       setLoading(false)
     }
 
@@ -240,6 +275,29 @@ function ReportDetail() {
               </div>
             </div>
 
+            {/* VOTARE */}
+            <div className="card" style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 12 }}>
+                Susține această sesizare
+              </p>
+              <button
+                className={`btn ${hasVoted ? 'btn-primary' : 'btn-outline'}`}
+                style={{ width: '100%', justifyContent: 'center', gap: 8 }}
+                onClick={handleVote}
+                disabled={!user || voting}
+                title={!user ? 'Loghează-te pentru a vota' : ''}
+              >
+                <span style={{ fontSize: '1.2rem' }}>👍</span>
+                <strong>{votesCount}</strong>
+                <span>{hasVoted ? 'Ai votat' : 'Votează'}</span>
+              </button>
+              {!user && (
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 8 }}>
+                  <Link to="/login" style={{ color: 'var(--primary)' }}>Loghează-te</Link> pentru a vota
+                </p>
+              )}
+            </div>
+
             {/* Acțiuni owner */}
             {user && user.id === report.user_id && (
               <div className="card" style={{ display:'flex', flexDirection:'column', gap:10 }}>
@@ -268,8 +326,8 @@ function ReportDetail() {
             )}
 
             {/* MODAL CONFIRMARE */}
-            {showConfirm && (
-              <div className="confirm-overlay">
+            {showConfirm && createPortal(
+              <div className="confirm-overlay" style={{ zIndex: 9999 }}>
                 <div className="confirm-modal">
                   <div className="confirm-modal__icon">🗑️</div>
                   <h3>Ștergi sesizarea?</h3>
@@ -285,7 +343,8 @@ function ReportDetail() {
                     </button>
                   </div>
                 </div>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
 
