@@ -7,77 +7,97 @@ import './InnerPage.css'
 import './MyReports.css'
 
 const STATUS_MAP = {
-  new:         { label: 'Nouă',       cls: 'badge-new',      icon: '🔵' },
-  in_progress: { label: 'În lucru',   cls: 'badge-progress', icon: '🟡' },
-  resolved:    { label: 'Rezolvată',  cls: 'badge-resolved', icon: '🟢' },
-  rejected:    { label: 'Respinsă',   cls: 'badge-rejected', icon: '🔴' },
+  new: { label: 'Nouă', cls: 'badge-new', icon: '🔵' },
+  in_progress: { label: 'În lucru', cls: 'badge-progress', icon: '🟡' },
+  resolved: { label: 'Rezolvată', cls: 'badge-resolved', icon: '🟢' },
+  rejected: { label: 'Respinsă', cls: 'badge-rejected', icon: '🔴' },
 }
 
-const CAT_ICONS = { 1:'🚧', 2:'💡', 3:'🗑️', 4:'🌳', 5:'🚰', 6:'🚌' }
+const CAT_ICONS = { 1: '🚧', 2: '💡', 3: '🗑️', 4: '🌳', 5: '🚰', 6: '🚌' }
 
 function MyReports() {
-  const { user }    = useAuth()
-  const navigate    = useNavigate()
-  const [reports, setReports]       = useState([])
-  const [loading, setLoading]       = useState(false)
-  const [error, setError]           = useState('')
-  const [filter, setFilter]         = useState('all')
-  const [confirmId, setConfirmId]   = useState(null)
-  const [deleting, setDeleting]     = useState(false)
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [reports, setReports] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [filter, setFilter] = useState('all')
+  const [confirmId, setConfirmId] = useState(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (!user?.id) return
-    fetchReports()
-  }, [user?.id])
 
-  async function fetchReports() {
-    console.log('fetchReports START, user.id:', user?.id)
-    setLoading(true)
-    setError('')
+    const controller = new AbortController()
+    let mounted = true
 
-    let done = false
     const timer = setTimeout(() => {
-      console.log('fetchReports TIMEOUT after 8s')
-      if (!done) {
-        done = true
-        setError('Serverul nu răspunde. Verifică conexiunea la internet.')
+      if (mounted) {
+        setError('Timeout: serverul nu răspunde în 8 secunde.')
         setLoading(false)
       }
     }, 8000)
 
+    fetchReports(controller).finally(() => {
+      if (mounted) setLoading(false)
+      clearTimeout(timer)
+    })
+
+    return () => {
+      mounted = false
+      controller.abort()
+      clearTimeout(timer)
+    }
+  }, [user?.id])
+
+  async function fetchReports(controller) {
+    setLoading(true)
+    setError('')
+
     try {
-      const { data, error } = await supabase
+      const reportsPromise = supabase
         .from('reports')
-        .select('*, categories(name)')
+        .select('id, category_id, title, address, image_url, status, created_at')
         .eq('user_id', user.id)
+        .abortSignal(controller.signal)
         .order('created_at', { ascending: false })
 
-      if (done) return
-      done = true
-      clearTimeout(timer)
+      const categoriesPromise = supabase
+        .from('categories')
+        .select('id, name')
 
-      if (error) {
-        setError(error.message.includes('does not exist') ? 'db_missing' : error.message)
-      } else {
-        setReports(data ?? [])
+      const [reportsRes, categoriesRes] = await Promise.all([reportsPromise, categoriesPromise])
+
+      // Afișează erorile exacte Supabase
+      if (reportsRes.error) {
+        const msg = reportsRes.error.message || 'Eroare necunoscută'
+        setError(`Supabase reports error: ${msg}`)
+        return
       }
+      if (categoriesRes.error) {
+        const msg = categoriesRes.error.message || 'Eroare necunoscută'
+        setError(`Supabase categories error: ${msg}`)
+        return
+      }
+
+      const catMap = new Map((categoriesRes.data ?? []).map(c => [c.id, c.name]))
+      const rows = (reportsRes.data ?? []).map(r => ({
+        ...r,
+        categories: { name: catMap.get(r.category_id) ?? null },
+      }))
+
+      setReports(rows)
     } catch (e) {
-      if (done) return
-      done = true
-      clearTimeout(timer)
-      setError('Eroare: ' + e.message)
-    } finally {
-      if (!done) { done = true; clearTimeout(timer) }
-      setLoading(false)
+      if (e.name === 'AbortError') return
+      const msg = e?.message ?? e
+      setError(`Fetch error: ${msg}`)
     }
   }
 
   async function handleDelete(id) {
     setDeleting(true)
     const { error } = await supabase.from('reports').delete().eq('id', id)
-    if (!error) {
-      setReports(prev => prev.filter(r => r.id !== id))
-    }
+    if (!error) setReports(prev => prev.filter(r => r.id !== id))
     setConfirmId(null)
     setDeleting(false)
   }
@@ -88,7 +108,10 @@ function MyReports() {
     return (
       <div className="inner-page">
         <div className="inner-page__container">
-          <div className="loading-spinner"><div className="spinner" /><p>Se încarcă...</p></div>
+          <div className="loading-spinner">
+            <div className="spinner" />
+            <p>Se încarcă...</p>
+          </div>
         </div>
       </div>
     )
@@ -110,12 +133,7 @@ function MyReports() {
           <Link to="/report/new" className="btn btn-primary">➕ Sesizare nouă</Link>
         </div>
 
-        {error === 'db_missing' && (
-          <div className="auth-alert auth-alert--error" style={{ marginBottom: 24 }}>
-            ⚠️ Tabelele lipsesc. Rulează SQL-ul și reîncarcă.
-          </div>
-        )}
-        {error && error !== 'db_missing' && (
+        {error && (
           <div className="auth-alert auth-alert--error" style={{ marginBottom: 24 }}>
             ⚠️ {error}
           </div>
@@ -132,7 +150,6 @@ function MyReports() {
           </div>
         )}
 
-        {/* MODAL CONFIRMARE ȘTERGERE — randat direct pe body ca să nu fie afectat de container */}
         {confirmId && createPortal(
           <div className="confirm-overlay">
             <div className="confirm-modal">
@@ -140,12 +157,10 @@ function MyReports() {
               <h3>Ștergi sesizarea?</h3>
               <p>Această acțiune este ireversibilă. Sesizarea și toate datele asociate vor fi șterse definitiv.</p>
               <div className="confirm-modal__actions">
-                <button className="btn btn-ghost" onClick={() => setConfirmId(null)}>
-                  Anulează
-                </button>
+                <button className="btn btn-ghost" onClick={() => setConfirmId(null)}>Anulează</button>
                 <button
                   className="btn"
-                  style={{ background:'#ef4444', color:'#fff' }}
+                  style={{ background: '#ef4444', color: '#fff' }}
                   disabled={deleting}
                   onClick={() => handleDelete(confirmId)}
                 >
@@ -188,7 +203,7 @@ function MyReports() {
 }
 
 function ReportCard({ report, onView, onEdit, onDelete }) {
-  const s    = STATUS_MAP[report.status] ?? STATUS_MAP.new
+  const s = STATUS_MAP[report.status] ?? STATUS_MAP.new
   const icon = CAT_ICONS[report.category_id] ?? '📍'
   const date = new Date(report.created_at).toLocaleDateString('ro-RO', {
     day: 'numeric', month: 'short', year: 'numeric'
@@ -209,7 +224,7 @@ function ReportCard({ report, onView, onEdit, onDelete }) {
           <span className={`badge ${s.cls}`}>{s.label}</span>
         </div>
 
-        <h3 className="report-card__title" onClick={onView} style={{cursor:'pointer'}}>
+        <h3 className="report-card__title" onClick={onView} style={{ cursor: 'pointer' }}>
           {report.title}
         </h3>
         <p className="report-card__address">📍 {report.address}</p>
@@ -221,19 +236,12 @@ function ReportCard({ report, onView, onEdit, onDelete }) {
           <span className="report-card__date">{date}</span>
         </div>
 
-        {/* BUTOANE ACȚIUNI */}
         <div className="report-card__actions">
-          <button className="btn btn-ghost btn-sm" onClick={onView}>
-            👁 Vezi
-          </button>
-          {canEdit && (
-            <button className="btn btn-outline btn-sm" onClick={onEdit}>
-              ✏️ Editează
-            </button>
-          )}
+          <button className="btn btn-ghost btn-sm" onClick={onView}>👁 Vezi</button>
+          {canEdit && <button className="btn btn-outline btn-sm" onClick={onEdit}>✏️ Editează</button>}
           <button
             className="btn btn-sm"
-            style={{ background:'#fee2e2', color:'#991b1b', border:'1px solid #fecaca' }}
+            style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' }}
             onClick={onDelete}
           >
             🗑️ Șterge
