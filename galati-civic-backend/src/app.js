@@ -28,7 +28,7 @@ const supabase = createClient(
 );
 
 // Ruta API /api/raport
-app.get('/api/raport', async (req, res) => {
+app.get('/api/reports', async (req, res) => {
     try {
         const { data, error } = await supabase.from('rapoarte').select('*');
         if (error) throw error;
