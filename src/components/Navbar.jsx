@@ -1,16 +1,22 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import './Navbar.css'
 
 function Navbar() {
-  const [scrolled, setScrolled]   = useState(false)
-  const [menuOpen, setMenuOpen]   = useState(false)
-  const [userOpen, setUserOpen]   = useState(false)
-  const { user, signOut }         = useAuth()
-  const location                  = useLocation()
-  const navigate                  = useNavigate()
-  const dropdownRef               = useRef(null)
+  const [scrolled, setScrolled]             = useState(false)
+  const [menuOpen, setMenuOpen]             = useState(false)
+  const [userOpen, setUserOpen]             = useState(false)
+  const [confirmLogout, setConfirmLogout]   = useState(false)
+  const [notifOpen, setNotifOpen]           = useState(false)
+  const [notifications, setNotifications]  = useState([])
+  const { user, signOut }                   = useAuth()
+  const location                            = useLocation()
+  const navigate                            = useNavigate()
+  const dropdownRef                         = useRef(null)
+  const notifRef                            = useRef(null)
 
   useEffect(() => {
     function handleScroll() { setScrolled(window.scrollY > 20) }
@@ -20,19 +26,49 @@ function Navbar() {
 
   useEffect(() => { setMenuOpen(false) }, [location])
 
-  // Închide dropdown-ul user la click în afara lui
+  // Fetch notificări
+  useEffect(() => {
+    if (!user) return
+    async function fetchNotifs() {
+      const { data } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20)
+      setNotifications(data ?? [])
+    }
+    fetchNotifs()
+  }, [user])
+
+  // Închide dropdowns la click în afară
   useEffect(() => {
     function handleClick(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setUserOpen(false)
-      }
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setUserOpen(false)
+      if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false)
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  async function markAllRead() {
+    const unreadIds = notifications.filter(n => !n.read).map(n => n.id)
+    if (!unreadIds.length) return
+    await supabase.from('notifications').update({ read: true }).in('id', unreadIds)
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+  }
+
   async function handleLogout() {
-    await signOut()
+    try {
+      await signOut()
+    } catch (e) {
+      console.warn('signOut error:', e)
+    }
+    // Curățăm localStorage indiferent de rezultat
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('sb-'))
+      .forEach(k => localStorage.removeItem(k))
+    setConfirmLogout(false)
     setUserOpen(false)
     navigate('/')
   }
@@ -41,8 +77,10 @@ function Navbar() {
     ? user.user_metadata.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
     : user?.email?.[0]?.toUpperCase() ?? '?'
 
+  const isHome = location.pathname === '/'
+
   return (
-    <header className={`navbar ${scrolled ? 'navbar--scrolled' : ''}`}>
+    <header className={`navbar ${(scrolled || !isHome) ? 'navbar--scrolled' : ''}`}>
       <div className="container navbar__inner">
 
         {/* LOGO */}
@@ -91,6 +129,51 @@ function Navbar() {
           </div>
         </nav>
 
+        {/* NOTIFICĂRI */}
+        {user && (
+          <div className="notif-bell" ref={notifRef}>
+            <button
+              className="notif-bell__btn"
+              onClick={() => { setNotifOpen(o => !o); markAllRead() }}
+            >
+              🔔
+              {notifications.filter(n => !n.read).length > 0 && (
+                <span className="notif-bell__badge">
+                  {notifications.filter(n => !n.read).length}
+                </span>
+              )}
+            </button>
+            {notifOpen && (
+              <div className="notif-dropdown">
+                <div className="notif-dropdown__header">
+                  <strong>Notificări</strong>
+                </div>
+                {notifications.length === 0 ? (
+                  <p className="notif-empty">Nicio notificare</p>
+                ) : (
+                  notifications.map(n => (
+                    <div
+                      key={n.id}
+                      className={`notif-item ${!n.read ? 'notif-item--unread' : ''}`}
+                      onClick={() => { setNotifOpen(false); if (n.report_id) navigate(`/report/${n.report_id}`) }}
+                    >
+                      <span className="notif-item__icon">
+                        {n.type === 'comment' ? '💬' : '📋'}
+                      </span>
+                      <div>
+                        <p className="notif-item__msg">{n.message}</p>
+                        <span className="notif-item__time">
+                          {new Date(n.created_at).toLocaleDateString('ro-RO')}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* AUTH — desktop */}
         <div className="navbar__auth">
           {user ? (
@@ -117,7 +200,7 @@ function Navbar() {
                     ➕ Sesizare nouă
                   </Link>
                   <div className="user-menu__divider" />
-                  <button className="user-menu__item user-menu__item--danger" onClick={handleLogout}>
+                  <button className="user-menu__item user-menu__item--danger" onClick={() => { setUserOpen(false); setConfirmLogout(true) }}>
                     🚪 Deconectare
                   </button>
                 </div>
@@ -130,6 +213,26 @@ function Navbar() {
             </>
           )}
         </div>
+
+        {/* MODAL CONFIRMARE DECONECTARE */}
+        {confirmLogout && createPortal(
+          <div className="confirm-overlay" style={{ zIndex: 9999 }}>
+            <div className="confirm-modal">
+              <div className="confirm-modal__icon">🚪</div>
+              <h3>Te deconectezi?</h3>
+              <p>Vei fi redirecționat către pagina principală.</p>
+              <div className="confirm-modal__actions">
+                <button className="btn btn-ghost" onClick={() => setConfirmLogout(false)}>
+                  Anulează
+                </button>
+                <button className="btn btn-primary" onClick={handleLogout}>
+                  Da, deconectează-mă
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
 
         {/* HAMBURGER */}
         <button
