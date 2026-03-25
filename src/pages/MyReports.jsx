@@ -31,13 +31,11 @@ function MyReports() {
   }, [user?.id])
 
   async function fetchReports() {
-    console.log('fetchReports START, user.id:', user?.id)
     setLoading(true)
     setError('')
 
     let done = false
     const timer = setTimeout(() => {
-      console.log('fetchReports TIMEOUT after 8s')
       if (!done) {
         done = true
         setError('Serverul nu răspunde. Verifică conexiunea la internet.')
@@ -48,7 +46,7 @@ function MyReports() {
     try {
       const { data, error } = await supabase
         .from('reports')
-        .select('*, categories(name)')
+        .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 

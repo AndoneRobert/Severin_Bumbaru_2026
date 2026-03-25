@@ -58,16 +58,8 @@ function Navbar() {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })))
   }
 
-  async function handleLogout() {
-    try {
-      await signOut()
-    } catch (e) {
-      console.warn('signOut error:', e)
-    }
-    // Curățăm localStorage indiferent de rezultat
-    Object.keys(localStorage)
-      .filter(k => k.startsWith('sb-'))
-      .forEach(k => localStorage.removeItem(k))
+  function handleLogout() {
+    signOut()
     setConfirmLogout(false)
     setUserOpen(false)
     navigate('/')

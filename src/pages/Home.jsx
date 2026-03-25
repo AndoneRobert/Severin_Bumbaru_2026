@@ -1,6 +1,7 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabaseClient'
 import './Home.css'
 
 const MapSection = lazy(() => import('../components/MapSection'))
@@ -14,31 +15,92 @@ function MapLoader() {
   )
 }
 
-/* ── date statice (vor fi înlocuite cu date reale din Supabase) ── */
-const CATEGORIES = [
-  { icon: '🚧', label: 'Drumuri & Asfalt',  count: 142, grad: 'linear-gradient(135deg,#fef3c7,#fde68a)' },
-  { icon: '💡', label: 'Iluminat Stradal',   count: 87,  grad: 'linear-gradient(135deg,#ede9fe,#ddd6fe)' },
-  { icon: '🗑️', label: 'Salubritate',        count: 203, grad: 'linear-gradient(135deg,#d1fae5,#a7f3d0)' },
-  { icon: '🌳', label: 'Spații Verzi',       count: 64,  grad: 'linear-gradient(135deg,#dcfce7,#bbf7d0)' },
-  { icon: '🚰', label: 'Apă & Canalizare',   count: 51,  grad: 'linear-gradient(135deg,#dbeafe,#bfdbfe)' },
-  { icon: '🚌', label: 'Transport Public',   count: 38,  grad: 'linear-gradient(135deg,#fce7f3,#fbcfe8)' },
-]
-
-const RECENT = [
-  { id:1, icon:'🚧', title:'Groapă pe Bd. Galați nr. 45',          status:'in_progress', time:'acum 2h',   cat:'Drumuri' },
-  { id:2, icon:'💡', title:'Felinar defect Parcul Rizer',           status:'new',         time:'acum 4h',   cat:'Iluminat' },
-  { id:3, icon:'🗑️', title:'Container deteriorat str. Brăilei',    status:'resolved',    time:'ieri',      cat:'Salubritate' },
-  { id:4, icon:'🚰', title:'Canalizare blocată Micro 40',           status:'new',         time:'acum 6h',   cat:'Apă' },
-]
+const CAT_META = {
+  1: { icon: '🚧', label: 'Drumuri & Asfalt',  grad: 'linear-gradient(135deg,#fef3c7,#fde68a)' },
+  2: { icon: '💡', label: 'Iluminat Stradal',   grad: 'linear-gradient(135deg,#ede9fe,#ddd6fe)' },
+  3: { icon: '🗑️', label: 'Salubritate',        grad: 'linear-gradient(135deg,#d1fae5,#a7f3d0)' },
+  4: { icon: '🌳', label: 'Spații Verzi',       grad: 'linear-gradient(135deg,#dcfce7,#bbf7d0)' },
+  5: { icon: '🚰', label: 'Apă & Canalizare',   grad: 'linear-gradient(135deg,#dbeafe,#bfdbfe)' },
+  6: { icon: '🚌', label: 'Transport Public',   grad: 'linear-gradient(135deg,#fce7f3,#fbcfe8)' },
+}
 
 const S = {
   new:         { label:'Nouă',      cls:'badge-new' },
   in_progress: { label:'În lucru',  cls:'badge-progress' },
   resolved:    { label:'Rezolvată', cls:'badge-resolved' },
+  rejected:    { label:'Respinsă',  cls:'badge-rejected' },
+}
+
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 60) return `acum ${m || 1}m`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `acum ${h}h`
+  const d = Math.floor(h / 24)
+  if (d === 1) return 'ieri'
+  return `acum ${d} zile`
 }
 
 function Home() {
   const { user } = useAuth()
+
+  const [stats, setStats]       = useState({ total: 0, resolved: 0, citizens: 0, avgDays: null })
+  const [categories, setCategories] = useState(
+    Object.entries(CAT_META).map(([id, m]) => ({ ...m, id: Number(id), count: 0 }))
+  )
+  const [recent, setRecent] = useState([])
+
+  useEffect(() => {
+    async function load() {
+      // Fetch all reports (lightweight) — id, status, category_id, title, address, created_at
+      const { data: reports } = await supabase
+        .from('reports')
+        .select('id, status, category_id, title, address, created_at')
+        .order('created_at', { ascending: false })
+        .limit(500)
+
+      if (!reports) return
+
+      const total         = reports.length
+      const resolvedList  = reports.filter(r => r.status === 'resolved')
+      const resolvedCount = resolvedList.length
+
+      // Medie zile până la rezolvare (aproximare: created_at → acum)
+      let avgDays = null
+      if (resolvedCount > 0) {
+        const sum = resolvedList.reduce((acc, r) =>
+          acc + (Date.now() - new Date(r.created_at).getTime()) / 86400000, 0)
+        avgDays = (sum / resolvedCount).toFixed(1)
+      }
+
+      // Counts per categorie
+      const catCounts = {}
+      reports.forEach(r => {
+        if (r.category_id) catCounts[r.category_id] = (catCounts[r.category_id] || 0) + 1
+      })
+
+      setStats(prev => ({ ...prev, total, resolved: resolvedCount, avgDays }))
+      setCategories(
+        Object.entries(CAT_META).map(([id, m]) => ({
+          ...m, id: Number(id), count: catCounts[Number(id)] || 0,
+        }))
+      )
+      setRecent(reports.slice(0, 4))
+    }
+
+    async function loadCitizens() {
+      const { count } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+      if (count != null) setStats(prev => ({ ...prev, citizens: count }))
+    }
+
+    load()
+    loadCitizens()
+  }, [])
+
+  const resolveRate = stats.total > 0 ? Math.round((stats.resolved / stats.total) * 100) : 0
 
   return (
     <div className="home">
