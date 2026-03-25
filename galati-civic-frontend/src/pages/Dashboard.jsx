@@ -3,14 +3,14 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const CATEGORIES = ['Infrastructură', 'Iluminat', 'Apă/Canal', 'Spații verzi', 'Salubritate', 'Altele'];
-const STATUSES   = ['Nou', 'În lucru', 'În verificare', 'Rezolvat'];
+const STATUSES = ['Nou', 'În lucru', 'În verificare', 'Rezolvat'];
 
 const StatusBadge = ({ status }) => {
     const map = {
-        'Nou':           { cls: 'badge-new',      text: '🔴 Nou' },
-        'În lucru':      { cls: 'badge-progress', text: '🟡 În lucru' },
-        'Rezolvat':      { cls: 'badge-done',     text: '🟢 Rezolvat' },
-        'În verificare': { cls: 'badge-review',   text: '🔵 Verificare' },
+        'Nou': { cls: 'badge-new', text: '🔴 Nou' },
+        'În lucru': { cls: 'badge-progress', text: '🟡 În lucru' },
+        'Rezolvat': { cls: 'badge-done', text: '🟢 Rezolvat' },
+        'În verificare': { cls: 'badge-review', text: '🔵 Verificare' },
     };
     const { cls, text } = map[status] || { cls: 'badge-new', text: status };
     return <span className={`status-badge ${cls}`}>{text}</span>;
@@ -27,16 +27,16 @@ const StatMini = ({ value, label, color, icon }) => (
 );
 
 export default function Dashboard() {
-    const [issues, setIssues]         = useState([]);
-    const [loading, setLoading]       = useState(true);
-    const [filterStatus, setFilter]   = useState('Toate');
-    const [filterCat, setFilterCat]   = useState('Toate');
-    const [search, setSearch]         = useState('');
-    const [sortBy, setSortBy]         = useState('date');
-    const [toast, setToast]           = useState({ msg: '', show: false, type: 'info' });
+    const [issues, setIssues] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [filterStatus, setFilter] = useState('Toate');
+    const [filterCat, setFilterCat] = useState('Toate');
+    const [search, setSearch] = useState('');
+    const [sortBy, setSortBy] = useState('date');
+    const [toast, setToast] = useState({ msg: '', show: false, type: 'info' });
 
     const { user, isAdmin, getToken } = useAuth();
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const apiUrl = (import.meta.env.VITE_API_URL || 'https://severin-bumbaru-2026.onrender.com/api').replace(/\/+$/, '');
 
     const showToast = useCallback((msg, type = 'info') => {
         setToast({ msg, show: true, type });
@@ -103,7 +103,7 @@ export default function Dashboard() {
             return true;
         })
         .sort((a, b) => {
-            if (sortBy === 'votes')    return (b.votes || 0) - (a.votes || 0);
+            if (sortBy === 'votes') return (b.votes || 0) - (a.votes || 0);
             if (sortBy === 'priority') {
                 const idx = ['Urgentă', 'Ridicată', 'Medie', 'Scăzută'];
                 return idx.indexOf(a.priority) - idx.indexOf(b.priority);
@@ -112,10 +112,10 @@ export default function Dashboard() {
         });
 
     const stats = {
-        total:      issues.length,
-        nou:        issues.filter(i => i.status === 'Nou').length,
-        inLucru:    issues.filter(i => i.status === 'În lucru').length,
-        rezolvat:   issues.filter(i => i.status === 'Rezolvat').length,
+        total: issues.length,
+        nou: issues.filter(i => i.status === 'Nou').length,
+        inLucru: issues.filter(i => i.status === 'În lucru').length,
+        rezolvat: issues.filter(i => i.status === 'Rezolvat').length,
     };
 
     return (
@@ -144,9 +144,9 @@ export default function Dashboard() {
 
             {/* Stats mini */}
             <div className="dash-stats-row">
-                <StatMini value={stats.total}    label="Total"     color="#3b82f6" icon="📋" />
-                <StatMini value={stats.nou}      label="Noi"       color="#ef4444" icon="🆕" />
-                <StatMini value={stats.inLucru}  label="În lucru"  color="#f59e0b" icon="⚙️" />
+                <StatMini value={stats.total} label="Total" color="#3b82f6" icon="📋" />
+                <StatMini value={stats.nou} label="Noi" color="#ef4444" icon="🆕" />
+                <StatMini value={stats.inLucru} label="În lucru" color="#f59e0b" icon="⚙️" />
                 <StatMini value={stats.rezolvat} label="Rezolvate" color="#10b981" icon="✅" />
             </div>
 
@@ -225,7 +225,7 @@ export default function Dashboard() {
                                         <span className="dash-cat-badge">{issue.category || '—'}</span>
                                     </td>
                                     <td>
-                                        <span className={`priority-chip priority-${(issue.priority || '').toLowerCase().replace('ă','a').replace('î','i').replace('â','a')}`}>
+                                        <span className={`priority-chip priority-${(issue.priority || '').toLowerCase().replace('ă', 'a').replace('î', 'i').replace('â', 'a')}`}>
                                             {issue.priority || '—'}
                                         </span>
                                     </td>
