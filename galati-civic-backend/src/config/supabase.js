@@ -1,9 +1,15 @@
+require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 
-// PUNEM VALORILE DIRECT (FĂRĂ process.env) PENTRU TEST
-const supabase = createClient(
-  'https://vgsvxwzbzfotszovlejt.supabase.co', 
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZnc3Z4d3piemZvdHN6b3ZsZWp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MjEyOTgsImV4cCI6MjA4OTk5NzI5OH0.cawtkw4FqEluzsxDXO3IDd-Z5hUZ7VK0g98NnSDNNPs'
-);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('SUPABASE_URL și SUPABASE_KEY trebuie definite în variabilele de mediu.');
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
 
 module.exports = supabase;

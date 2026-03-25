@@ -1,109 +1,157 @@
-// src/app.js
 const express = require('express');
 const cors = require('cors');
-const { createClient } = require('@supabase/supabase-js');
+const supabase = require('./config/supabase');
 
 const app = express();
+const issuesTable = process.env.SUPABASE_ISSUES_TABLE || 'issues';
 
-// Middleware globale
-app.use(cors());
+const allowedOrigins = (process.env.CORS_ORIGIN || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+app.use(
+    cors({
+        origin(origin, callback) {
+            if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
+            return callback(new Error(`Origin nepermis de CORS: ${origin}`));
+        },
+    }),
+);
 app.use(express.json());
 
-// Supabase client (folosind cheia secretă, backend securizat)
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_KEY
-);
+const mapIssuePayload = (body = {}) => ({
+    title: body.title,
+    description: body.description,
+    lat: body.lat ?? body.latitude,
+    lng: body.lng ?? body.longitude,
+    category: body.category ?? null,
+    category_id: body.category_id ?? null,
+    priority: body.priority ?? 'Medie',
+    status: body.status ?? 'Nou',
+    user_id: body.user_id ?? null,
+});
 
-// -------------------------
-// RUTA DE TEST / HEALTH CHECK
-// -------------------------
+const listIssues = async (_req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from(issuesTable)
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        return res.json(data || []);
+    } catch (err) {
+        console.error('[DB ERROR GET ISSUES]:', err);
+        return res.status(500).json({ error: 'Eroare la interogarea bazei de date.' });
+    }
+};
+
+const createIssue = async (req, res) => {
+    const payload = mapIssuePayload(req.body);
+
+    if (!payload.title || !payload.description || payload.lat == null || payload.lng == null) {
+        return res.status(400).json({ error: 'title, description, lat și lng sunt obligatorii.' });
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from(issuesTable)
+            .insert([payload])
+            .select('*')
+            .single();
+
+        if (error) throw error;
+        return res.status(201).json(data);
+    } catch (err) {
+        console.error('[DB ERROR POST ISSUE]:', err);
+        return res.status(500).json({ error: 'Eroare la inserarea raportului.' });
+    }
+};
+
+const updateIssue = async (req, res) => {
+    const { id } = req.params;
+    const allowedFields = ['title', 'description', 'status', 'priority', 'category', 'category_id', 'lat', 'lng'];
+
+    const updatePayload = Object.fromEntries(
+        Object.entries(req.body || {}).filter(([key, value]) => allowedFields.includes(key) && value !== undefined),
+    );
+
+    if (req.body?.latitude !== undefined) updatePayload.lat = req.body.latitude;
+    if (req.body?.longitude !== undefined) updatePayload.lng = req.body.longitude;
+    if (Object.keys(updatePayload).length === 0) {
+        return res.status(400).json({ error: 'Nu există câmpuri valide pentru actualizare.' });
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from(issuesTable)
+            .update(updatePayload)
+            .eq('id', id)
+            .select('*')
+            .single();
+
+        if (error) throw error;
+        if (!data) return res.status(404).json({ error: 'Raportul nu a fost găsit.' });
+        return res.json(data);
+    } catch (err) {
+        console.error('[DB ERROR PUT ISSUE]:', err);
+        return res.status(500).json({ error: 'Eroare la actualizarea raportului.' });
+    }
+};
+
+const deleteIssue = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const { error, count } = await supabase
+            .from(issuesTable)
+            .delete({ count: 'exact' })
+            .eq('id', id);
+
+        if (error) throw error;
+        if (!count) return res.status(404).json({ error: 'Raportul nu a fost găsit.' });
+
+        return res.status(204).send();
+    } catch (err) {
+        console.error('[DB ERROR DELETE ISSUE]:', err);
+        return res.status(500).json({ error: 'Eroare la ștergerea raportului.' });
+    }
+};
+
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
         message: 'API-ul Galați Civic este online!',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        table: issuesTable,
     });
 });
 
-// -------------------------
-// GET toate raportările (issues)
-// -------------------------
-app.get('/api/raport', async (req, res) => {
-    try {
-        const { data, error } = await supabase.from('issues').select('*');
-        if (error) throw error;
-        res.json(data);
-    } catch (err) {
-        console.error('[DB ERROR GET]:', err);
-        res.status(500).json({ error: 'Eroare la interogarea bazei de date.' });
-    }
-});
+app.get('/api/raport', listIssues);
+app.post('/api/raport', createIssue);
+app.put('/api/raport/:id', updateIssue);
 
-// -------------------------
-// POST creare raport nou
-// -------------------------
-app.post('/api/raport', async (req, res) => {
-    const { title, description, latitude, longitude, category_id } = req.body;
+app.get('/api/issues', listIssues);
+app.get('/api/issues/my', listIssues);
+app.post('/api/issues', createIssue);
+app.put('/api/issues/:id', updateIssue);
+app.delete('/api/issues/:id', deleteIssue);
 
-    // Validare minimală
-    if (!title) {
-        return res.status(400).json({ error: 'Title este obligatoriu.' });
-    }
-
-    try {
-        const { data, error } = await supabase.from('issues').insert([{
-            title,
-            description,
-            latitude,
-            longitude,
-            category_id,
-            status: 'pending'
-        }]);
-        if (error) throw error;
-        res.status(201).json(data);
-    } catch (err) {
-        console.error('[DB ERROR POST]:', err);
-        res.status(500).json({ error: 'Eroare la inserarea raportului.' });
-    }
-});
-
-// -------------------------
-// PUT update status (doar admin)
-// -------------------------
-app.put('/api/raport/:id', async (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    if (!status) {
-        return res.status(400).json({ error: 'Status este obligatoriu.' });
-    }
-
-    try {
-        const { data, error } = await supabase.from('issues')
-            .update({ status })
-            .eq('id', id);
-        if (error) throw error;
-        res.json(data);
-    } catch (err) {
-        console.error('[DB ERROR PUT]:', err);
-        res.status(500).json({ error: 'Eroare la actualizarea statusului.' });
-    }
-});
-
-// -------------------------
-// Middleware pentru rute inexistente (404)
-// -------------------------
 app.use((req, res) => {
     res.status(404).json({ error: 'Ruta nu a fost găsită.' });
 });
 
-// -------------------------
-// Middleware global pentru erori
-// -------------------------
 app.use((err, req, res, next) => {
+
     console.error('[GLOBAL ERROR]:', err.stack);
-    res.status(500).json({ error: 'Eroare internă pe server.' });
+
+    if (err.message?.startsWith('Origin nepermis de CORS')) {
+        return res.status(403).json({ error: err.message });
+    }
+
+    return res.status(500).json({ error: 'Eroare internă pe server.' });
 });
 
 module.exports = app;
