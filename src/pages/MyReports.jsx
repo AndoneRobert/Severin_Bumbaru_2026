@@ -68,8 +68,11 @@ function MyReports() {
 
       const [reportsRes, categoriesRes] = await Promise.all([reportsPromise, categoriesPromise])
 
+      if (controller.signal.aborted) return
+
       // Afișează erorile exacte Supabase
       if (reportsRes.error) {
+        if (reportsRes.error.name === 'AbortError') return
         const msg = reportsRes.error.message || 'Eroare necunoscută'
         setError(`Supabase reports error: ${msg}`)
         return
