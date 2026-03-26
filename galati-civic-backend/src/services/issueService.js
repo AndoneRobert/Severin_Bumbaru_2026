@@ -4,16 +4,22 @@ const issuesTable = process.env.SUPABASE_ISSUES_TABLE || 'issues';
 const issueVotesTable = process.env.SUPABASE_ISSUE_VOTES_TABLE || 'issues_votes';
 const issueCommentsTable = process.env.SUPABASE_ISSUE_COMMENTS_TABLE || 'issues_comments';
 const issueFollowsTable = process.env.SUPABASE_ISSUE_FOLLOWS_TABLE || 'issues_follows';
+const issueFlagsTable = process.env.SUPABASE_ISSUE_FLAGS_TABLE || 'issues_flags';
+const notificationsTable = process.env.SUPABASE_NOTIFICATIONS_TABLE || 'notifications';
 
 const ISSUE_TABLE_CANDIDATES = [issuesTable, 'issues', 'rapoarte'];
 const ISSUE_VOTES_TABLE_CANDIDATES = [issueVotesTable, 'issues_votes', 'report_votes'];
 const ISSUE_COMMENTS_TABLE_CANDIDATES = [issueCommentsTable, 'issues_comments', 'report_comments'];
 const ISSUE_FOLLOWS_TABLE_CANDIDATES = [issueFollowsTable, 'issues_follows', 'issue_follows', 'report_follows'];
+const ISSUE_FLAGS_TABLE_CANDIDATES = [issueFlagsTable, 'issues_flags'];
+const NOTIFICATIONS_TABLE_CANDIDATES = [notificationsTable, 'notifications'];
 
 let resolvedIssuesTable = process.env.SUPABASE_ISSUES_TABLE || null;
 let resolvedIssueVotesTable = process.env.SUPABASE_ISSUE_VOTES_TABLE || null;
 let resolvedIssueCommentsTable = process.env.SUPABASE_ISSUE_COMMENTS_TABLE || null;
 let resolvedIssueFollowsTable = process.env.SUPABASE_ISSUE_FOLLOWS_TABLE || null;
+let resolvedIssueFlagsTable = process.env.SUPABASE_ISSUE_FLAGS_TABLE || null;
+let resolvedNotificationsTable = process.env.SUPABASE_NOTIFICATIONS_TABLE || null;
 
 const unique = (items) => [...new Set(items.filter(Boolean))];
 
@@ -76,6 +82,24 @@ const runOnIssueFollowsTable = (operation) => runOnTable(operation, ISSUE_FOLLOW
     },
     set value(next) {
         resolvedIssueFollowsTable = next;
+    },
+});
+
+const runOnIssueFlagsTable = (operation) => runOnTable(operation, ISSUE_FLAGS_TABLE_CANDIDATES, {
+    get value() {
+        return resolvedIssueFlagsTable;
+    },
+    set value(next) {
+        resolvedIssueFlagsTable = next;
+    },
+});
+
+const runOnNotificationsTable = (operation) => runOnTable(operation, NOTIFICATIONS_TABLE_CANDIDATES, {
+    get value() {
+        return resolvedNotificationsTable;
+    },
+    set value(next) {
+        resolvedNotificationsTable = next;
     },
 });
 
@@ -182,11 +206,58 @@ const unfollowIssue = async ({ issueId, userId }, dbClient = supabase) => {
     return count || 0;
 };
 
+const flagIssue = async ({ issueId, userId, reason = null }, dbClient = supabase) => {
+    const payload = [{ issue_id: issueId, user_id: userId, reason }];
+    const { data, error } = await runOnIssueFlagsTable(async (table) => dbClient
+        .from(table)
+        .insert(payload)
+        .select('id, issue_id, user_id, created_at')
+        .single());
+
+    if (error) throw error;
+    return data;
+};
+
+const countFlagsForIssue = async (issueId, dbClient = supabase) => {
+    const { count } = await runOnIssueFlagsTable(async (table) => dbClient
+        .from(table)
+        .select('id', { count: 'exact', head: true })
+        .eq('issue_id', issueId));
+    return count || 0;
+};
+
+const countFlagsByUser = async (userId, dbClient = supabase) => {
+    const { count } = await runOnIssueFlagsTable(async (table) => dbClient
+        .from(table)
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId));
+    return count || 0;
+};
+
+const createNotification = async ({
+    userId,
+    issueId,
+    type = 'status_update',
+    message,
+}, dbClient = supabase) => {
+    const payload = [{ user_id: userId, report_id: issueId, type, message, read: false }];
+    const { data, error } = await runOnNotificationsTable(async (table) => dbClient
+        .from(table)
+        .insert(payload)
+        .select('*')
+        .single());
+
+    if (error) throw error;
+    return data;
+};
+
 module.exports = {
     issuesTable,
     issueVotesTable,
     issueCommentsTable,
     issueFollowsTable,
+    issueFlagsTable,
+    notificationsTable,
     listIssues,
     listIssuesByUser,
     createIssue,
@@ -198,6 +269,12 @@ module.exports = {
     listFollowedIssueIds,
     followIssue,
     unfollowIssue,
+    flagIssue,
+    countFlagsForIssue,
+    countFlagsByUser,
+    createNotification,
     runOnIssueCommentsTable,
     runOnIssueFollowsTable,
+    runOnIssueFlagsTable,
+    runOnNotificationsTable,
 };

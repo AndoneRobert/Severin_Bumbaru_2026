@@ -154,13 +154,34 @@ const updateIssue = async (req, res) => {
 };
 
 const updateIssueStatus = async (req, res) => {
+    const { id } = req.params;
     const { status } = req.body || {};
     if (status === undefined) {
         return res.status(400).json({ error: 'Câmpul status este obligatoriu.' });
     }
 
-    req.body = { status };
-    return updateIssue(req, res);
+    try {
+        const data = await issueService.updateIssue(id, { status }, req.supabase);
+        if (!data) return res.status(404).json({ error: 'Raportul nu a fost găsit.' });
+
+        if (data.user_id) {
+            try {
+                await issueService.createNotification({
+                    userId: data.user_id,
+                    issueId: data.id || id,
+                    type: 'status_update',
+                    message: `Statusul sesizării #${data.id || id} a fost actualizat la "${status}".`,
+                }, req.supabase);
+            } catch (notifyError) {
+                console.warn('[NOTIFICATION WARNING STATUS UPDATE]:', notifyError?.message || notifyError);
+            }
+        }
+
+        return res.json(data);
+    } catch (err) {
+        console.error('[DB ERROR PATCH ISSUE STATUS]:', err);
+        return res.status(500).json({ error: 'Eroare la actualizarea statusului.' });
+    }
 };
 
 const deleteIssue = async (req, res) => {
@@ -251,7 +272,38 @@ const unfollowIssue = async (req, res) => {
     }
 };
 
-const flagIssue = async (_req, res) => res.status(202).json({ message: 'Raportarea a fost înregistrată.' });
+const flagIssue = async (req, res) => {
+    const userId = req.user?.id;
+    const { id } = req.params;
+    const reason = req.body?.reason ?? null;
+
+    if (!userId) {
+        return res.status(401).json({ error: 'Utilizator neautentificat.' });
+    }
+
+    try {
+        const data = await issueService.flagIssue({ issueId: id, userId, reason }, req.supabase);
+        const [totalFlagsForIssue, totalFlagsByUser] = await Promise.all([
+            issueService.countFlagsForIssue(id, req.supabase),
+            issueService.countFlagsByUser(userId, req.supabase),
+        ]);
+
+        return res.status(201).json({
+            message: 'Raportarea a fost înregistrată.',
+            flag: data,
+            total_flags_for_issue: totalFlagsForIssue,
+            total_flags_by_user: totalFlagsByUser,
+            latest_flagged_at: data?.created_at || null,
+        });
+    } catch (err) {
+        if (err?.code === '23505') {
+            return res.status(409).json({ error: 'Ai raportat deja această sesizare.' });
+        }
+
+        console.error('[DB ERROR POST ISSUE FLAG]:', err);
+        return res.status(500).json({ error: 'Eroare la raportarea sesizării.' });
+    }
+};
 
 const replyIssue = async (req, res) => {
     const message = req.body?.message;
