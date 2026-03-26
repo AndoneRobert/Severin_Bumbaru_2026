@@ -1,4 +1,7 @@
 const issueService = require('../services/issueService');
+const supabaseAdmin = require('../config/supabase');
+
+const getMutationDbClient = (req) => (['admin', 'moderator'].includes(req.user?.role) ? supabaseAdmin : req.supabase);
 
 const mapIssuePayload = (body = {}) => ({
     title: body.title,
@@ -144,7 +147,7 @@ const updateIssue = async (req, res) => {
     }
 
     try {
-        const data = await issueService.updateIssue(id, updatePayload, req.supabase);
+        const data = await issueService.updateIssue(id, updatePayload, getMutationDbClient(req));
         if (!data) return res.status(404).json({ error: 'Raportul nu a fost găsit.' });
         return res.json(data);
     } catch (err) {
@@ -161,7 +164,7 @@ const updateIssueStatus = async (req, res) => {
     }
 
     try {
-        const data = await issueService.updateIssue(id, { status }, req.supabase);
+        const data = await issueService.updateIssue(id, { status }, getMutationDbClient(req));
         if (!data) return res.status(404).json({ error: 'Raportul nu a fost găsit.' });
 
         if (data.user_id) {
@@ -188,7 +191,7 @@ const deleteIssue = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const count = await issueService.deleteIssue(id, req.supabase);
+        const count = await issueService.deleteIssue(id, getMutationDbClient(req));
         if (!count) return res.status(404).json({ error: 'Raportul nu a fost găsit.' });
 
         return res.status(204).send();
@@ -315,6 +318,80 @@ const replyIssue = async (req, res) => {
     return updateIssue(req, res);
 };
 
+const forwardIssue = async (req, res) => {
+    const { id } = req.params;
+    const department = req.body?.department;
+    const message = req.body?.message ?? '';
+
+    if (!department) {
+        return res.status(400).json({ error: 'Departamentul este obligatoriu.' });
+    }
+
+    try {
+        await issueService.updateIssue(id, {
+            status: 'În lucru',
+            admin_reply: [
+                `Departament responsabil: ${department}`,
+                message ? `Mesaj intern: ${message}` : null,
+            ].filter(Boolean).join('\n'),
+        }, req.supabase);
+
+        try {
+            await issueService.createInternalIssueComment({
+                issueId: id,
+                userId: req.user?.id ?? null,
+                department,
+                message,
+            }, req.supabase);
+        } catch (commentError) {
+            console.warn('[FORWARD COMMENT WARNING]:', commentError?.message || commentError);
+        }
+
+        return res.status(200).json({
+            message: 'Sesizarea a fost redirecționată intern.',
+            department,
+            forwarded_at: new Date().toISOString(),
+            issue_id: id,
+        });
+    } catch (err) {
+        console.error('[DB ERROR POST ISSUE FORWARD]:', err);
+        return res.status(500).json({ error: 'Eroare la redirecționarea sesizării.' });
+    }
+};
+
+const listMyNotifications = async (req, res) => {
+    const userId = req.user?.id;
+    if (!userId) {
+        return res.status(401).json({ error: 'Utilizator neautentificat.' });
+    }
+
+    try {
+        const data = await issueService.listNotificationsByUser(userId, req.supabase);
+        return res.json(data);
+    } catch (err) {
+        console.error('[DB ERROR GET NOTIFICATIONS]:', err);
+        return res.status(500).json({ error: 'Eroare la interogarea notificărilor.' });
+    }
+};
+
+const markMyNotificationRead = async (req, res) => {
+    const userId = req.user?.id;
+    const { notificationId } = req.params;
+
+    if (!userId) {
+        return res.status(401).json({ error: 'Utilizator neautentificat.' });
+    }
+
+    try {
+        const data = await issueService.markNotificationRead({ notificationId, userId }, req.supabase);
+        if (!data) return res.status(404).json({ error: 'Notificarea nu a fost găsită.' });
+        return res.json(data);
+    } catch (err) {
+        console.error('[DB ERROR PATCH NOTIFICATION READ]:', err);
+        return res.status(500).json({ error: 'Eroare la actualizarea notificării.' });
+    }
+};
+
 module.exports = {
     listIssues,
     listMyIssues,
@@ -328,4 +405,7 @@ module.exports = {
     unfollowIssue,
     flagIssue,
     replyIssue,
+    forwardIssue,
+    listMyNotifications,
+    markMyNotificationRead,
 };

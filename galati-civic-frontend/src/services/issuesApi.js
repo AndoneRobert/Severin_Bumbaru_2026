@@ -74,3 +74,19 @@ export const replyIssue = async (id, message, token) => {
     const response = await apiClient.post(`/issues/${id}/reply`, { message }, authConfig(token));
     return normalizeIssueResponse(response.data);
 };
+
+export const forwardIssue = async (id, payload, token) => {
+    const response = await apiClient.post(`/issues/${id}/forward`, payload, authConfig(token));
+    return resolveData(response.data);
+};
+
+export const getMyNotifications = async (token) => {
+    const response = await apiClient.get('/notifications/my', authConfig(token));
+    const payload = resolveData(response.data);
+    return Array.isArray(payload) ? payload : [];
+};
+
+export const markNotificationRead = async (notificationId, token) => {
+    const response = await apiClient.patch(`/notifications/${notificationId}/read`, {}, authConfig(token));
+    return resolveData(response.data);
+};

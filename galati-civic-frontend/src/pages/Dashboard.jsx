@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getAllIssues, updateIssue, deleteIssue as deleteIssueApi } from '../services/issuesApi';
+import { getAllIssues, updateIssue, deleteIssue as deleteIssueApi, forwardIssue as forwardIssueApi } from '../services/issuesApi';
 
 const CATEGORIES = ['Infrastructură', 'Iluminat', 'Apă/Canal', 'Spații verzi', 'Salubritate', 'Altele'];
 const STATUSES = ['Nou', 'În lucru', 'În verificare', 'Rezolvat'];
@@ -184,6 +184,13 @@ export default function Dashboard() {
         };
 
         try {
+            if (sendToDepartment) {
+                await forwardIssueApi(editingIssue.id, {
+                    department: editForm.department,
+                    message: editForm.adminMessage,
+                }, authToken);
+            }
+
             const updatedIssue = await updateIssue(editingIssue.id, payload, authToken);
             setIssues((prev) => prev.map((issue) => (issue.id === editingIssue.id ? { ...issue, ...updatedIssue } : issue)));
             showToast(sendToDepartment ? 'Sesizare trimisă către departament.' : 'Sesizare actualizată.', 'success');

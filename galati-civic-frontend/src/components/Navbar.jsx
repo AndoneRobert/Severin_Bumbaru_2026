@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
+import { getMyNotifications, markNotificationRead } from '../services/issuesApi';
 
 import BaseMap from '../features/map/components/BaseMap';
 import LocationPickerLayer from '../features/map/components/LocationPickerLayer';
@@ -42,6 +43,8 @@ export default function Navbar() {
     const [location, setLocation] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [formErrors, setFormErrors] = useState({});
+    const [notifications, setNotifications] = useState([]);
+    const [notificationsLoading, setNotificationsLoading] = useState(false);
 
     const menuRef = useRef(null);
     const panelRef = useRef(null);
@@ -65,6 +68,32 @@ export default function Navbar() {
         return () => { document.body.style.overflow = ''; };
     }, [reportOpen]);
 
+    useEffect(() => {
+        let cancelled = false;
+        const loadNotifications = async () => {
+            if (!isAuthenticated || useMock) {
+                setNotifications([]);
+                return;
+            }
+
+            setNotificationsLoading(true);
+            try {
+                const token = (await getToken?.()) || user?.token;
+                const items = await getMyNotifications(token);
+                if (cancelled) return;
+                setNotifications(items);
+            } catch {
+                if (cancelled) return;
+                setNotifications([]);
+            } finally {
+                if (!cancelled) setNotificationsLoading(false);
+            }
+        };
+
+        loadNotifications();
+        return () => { cancelled = true; };
+    }, [isAuthenticated, getToken, user?.token, useMock]);
+
     const openReport = () => {
         if (!isAuthenticated) { navigate('/login'); return; }
         navigate('/create-issue');
@@ -76,6 +105,23 @@ export default function Navbar() {
         setMenuOpen(false);
         await logout();
         navigate('/');
+    };
+
+    const unreadNotifications = notifications.filter((item) => !item.read);
+
+    const handleMarkNotificationRead = async (notificationId) => {
+        if (useMock) {
+            setNotifications((prev) => prev.map((item) => (item.id === notificationId ? { ...item, read: true } : item)));
+            return;
+        }
+
+        try {
+            const token = (await getToken?.()) || user?.token;
+            await markNotificationRead(notificationId, token);
+            setNotifications((prev) => prev.map((item) => (item.id === notificationId ? { ...item, read: true } : item)));
+        } catch {
+            // ignora eroarea și păstrează starea locală curentă
+        }
     };
 
     const validate = () => {
@@ -170,17 +216,51 @@ export default function Navbar() {
 
                     {isAuthenticated ? (
                         <div className={m('nav-user-menu')} ref={menuRef}>
-                            <button className={m('nav-avatar-btn')} onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen}>
+                            <button
+                                className={m('nav-avatar-btn')}
+                                onClick={() => setMenuOpen(!menuOpen)}
+                                aria-expanded={menuOpen}
+                                aria-haspopup="menu"
+                                aria-label="Deschide meniul utilizatorului"
+                            >
                                 <span className={m('nav-avatar')}>{avatarInitial}</span>
                                 <span className={m('nav-username')}>{displayName}</span>
                                 <span className={m(`nav-chevron ${menuOpen ? 'open' : ''}`)}>▾</span>
                             </button>
                             {menuOpen && (
-                                <div className={m('nav-dropdown')}>
+                                <div className={m('nav-dropdown')} role="menu">
                                     <div className={m('dropdown-header')}>
                                         <span className={m('dropdown-name')}>{displayName}</span>
                                         <span className={m('dropdown-email')}>{user?.email}</span>
                                         {isAdmin && <span className={m('dropdown-role')}>Administrator</span>}
+                                    </div>
+                                    <div className={m('dropdown-divider')} />
+                                    <div className={m('notif-block')}>
+                                        <div className={m('notif-header')}>
+                                            <span>Notificări</span>
+                                            <span className={m('notif-count')}>{unreadNotifications.length} necitite</span>
+                                        </div>
+                                        {notificationsLoading ? (
+                                            <div className={m('notif-empty')}>Se încarcă...</div>
+                                        ) : notifications.length === 0 ? (
+                                            <div className={m('notif-empty')}>Nu ai notificări momentan.</div>
+                                        ) : (
+                                            <div className={m('notif-list')}>
+                                                {notifications.slice(0, 5).map((item) => (
+                                                    <button
+                                                        key={item.id}
+                                                        className={m(`notif-item ${item.read ? 'notif-item-read' : ''}`)}
+                                                        onClick={() => handleMarkNotificationRead(item.id)}
+                                                        aria-label={`Marchează notificarea ${item.id} ca citită`}
+                                                    >
+                                                        <span className={m('notif-message')}>{item.message || 'Actualizare sesizare'}</span>
+                                                        <span className={m('notif-time')}>
+                                                            {item.created_at ? new Date(item.created_at).toLocaleDateString('ro-RO') : ''}
+                                                        </span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className={m('dropdown-divider')} />
                                     <Link to="/my-issues" className={m('dropdown-item')} onClick={() => setMenuOpen(false)}>Sesizările mele</Link>

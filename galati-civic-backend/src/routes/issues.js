@@ -17,6 +17,9 @@ router.post('/issues/:id/follow', requireAuth, issueController.followIssue);
 router.delete('/issues/:id/follow', requireAuth, issueController.unfollowIssue);
 router.post('/issues/:id/flag', requireAuth, issueController.flagIssue);
 router.post('/issues/:id/reply', requireAuth, requireRole(['moderator', 'admin']), issueController.replyIssue);
+router.post('/issues/:id/forward', requireAuth, requireRole(['moderator', 'admin']), issueController.forwardIssue);
+router.get('/notifications/my', requireAuth, issueController.listMyNotifications);
+router.patch('/notifications/:notificationId/read', requireAuth, issueController.markMyNotificationRead);
 
 // Rută administrativă dedicată schimbării statusului
 router.patch('/issues/:id/status', requireAuth, requireRole(['moderator', 'admin']), issueController.updateIssueStatus);
