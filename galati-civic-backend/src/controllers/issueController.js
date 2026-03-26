@@ -1,4 +1,4 @@
-const issuesService = require('../services/issuesService');
+const issuesService = require('../services/issueService');
 
 const mapIssuePayload = (body = {}) => ({
     title: body.title,
@@ -22,8 +22,21 @@ const listIssues = async (_req, res) => {
     }
 };
 
+const listMyIssues = async (req, res) => {
+    try {
+        const data = await issuesService.listIssuesByUser(req.user.id);
+        return res.json(data);
+    } catch (err) {
+        console.error('[DB ERROR GET MY ISSUES]:', err);
+        return res.status(500).json({ error: 'Eroare la interogarea sesizărilor utilizatorului.' });
+    }
+};
+
 const createIssue = async (req, res) => {
-    const payload = mapIssuePayload(req.body);
+    const payload = {
+        ...mapIssuePayload(req.body),
+        user_id: req.user?.id ?? req.body?.user_id ?? null,
+    };
 
     if (!payload.title || !payload.description || payload.lat == null || payload.lng == null) {
         return res.status(400).json({ error: 'title, description, lat și lng sunt obligatorii.' });
@@ -104,6 +117,7 @@ const replyIssue = async (req, res) => {
 
 module.exports = {
     listIssues,
+    listMyIssues,
     createIssue,
     updateIssue,
     deleteIssue,

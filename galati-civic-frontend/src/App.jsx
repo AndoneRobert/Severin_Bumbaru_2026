@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import CreateIssue from './pages/CreateIssue';
+import Admin from './pages/Admin';
 import { AuthProvider } from './context/AuthContext';
 import './App.css';
 
@@ -21,6 +22,7 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/my-issues" element={<CreateIssue />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/admin" element={<Admin />} />
               {/* <Routes path="/register" element={<Register />} />      */}
             </Routes>
           </main>
