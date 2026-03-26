@@ -14,18 +14,24 @@
                 }
                 .nav-brand a {
                     font-family: 'Playfair Display', Georgia, serif;
-                    font-size: 1.3rem; font-weight: 700; color: #e8f0fe;
+                    font-size: 1.32rem; font-weight: 700; color: #f8fbff;
                     text-decoration: none; display: flex; align-items: center; gap: 7px;
                 }
                 .nav-brand span { color: #3b82f6; }
-                .nav-logo-icon { font-size: 18px; }
+                .nav-logo-icon {
+                    display: inline-flex; align-items: center; justify-content: center;
+                    width: 26px; height: 26px; border-radius: 7px;
+                    font-size: 11px; font-weight: 800; letter-spacing: .4px;
+                    color: #dbeafe; background: rgba(59,130,246,.2);
+                    border: 1px solid rgba(147,197,253,.35);
+                }
                 .nav-links { display: flex; gap: 2px; align-items: center; }
                 .nav-link {
-                    color: #8fa3c0; text-decoration: none; font-size: 13.5px; font-weight: 500;
+                    color: #dbe7fb; text-decoration: none; font-size: 14.5px; font-weight: 600;
                     padding: 6px 13px; border-radius: 8px; transition: all .18s; white-space: nowrap;
                 }
                 .nav-link:hover { color: #e8f0fe; background: rgba(255,255,255,.05); }
-                .nav-link-active { color: #3b82f6 !important; background: rgba(59,130,246,.1) !important; }
+                .nav-link-active { color: #93c5fd !important; background: rgba(59,130,246,.18) !important; }
                 .nav-link-admin { color: #c084fc !important; }
                 .nav-right { display: flex; align-items: center; gap: 8px; }
                 .nav-auth-btns { display: flex; align-items: center; gap: 6px; }
@@ -76,7 +82,7 @@
                     border-radius: 8px; display: flex; align-items: center; justify-content: center;
                     font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0;
                 }
-                .nav-username { font-size: 13px; font-weight: 500; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                .nav-username { font-size: 14px; font-weight: 600; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
                 .nav-chevron { font-size: 11px; color: #4d6380; transition: transform .2s; }
                 .nav-chevron.open { transform: rotate(180deg); }
 
@@ -96,7 +102,7 @@
                 .dropdown-divider { height: 1px; background: rgba(255,255,255,.06); margin: 4px 0; }
                 .dropdown-item {
                     display: flex; align-items: center; gap: 8px; padding: 10px 16px;
-                    font-size: 13px; color: #8fa3c0; text-decoration: none; transition: all .15s;
+                    font-size: 14px; color: #dbe7fb; text-decoration: none; transition: all .15s;
                     cursor: pointer; background: none; border: none; width: 100%;
                     text-align: left; font-family: inherit;
                 }
@@ -285,7 +291,7 @@
                 .rp-btn-secondary {
                     background: rgba(255,255,255,.05); color: #8fa3c0;
                     border: 1px solid rgba(255,255,255,.1); padding: 11px 20px; border-radius: 9px;
-                    font-size: 13px; font-weight: 500; cursor: pointer;
+                    font-size: 14px; font-weight: 600; cursor: pointer;
                     font-family: inherit; transition: all .18s;
                 }
                 .rp-btn-secondary:hover { border-color: #3b82f6; color: #3b82f6; }
@@ -330,7 +336,7 @@
                     from { opacity: 0; transform: scale(.5); }
                     to   { opacity: 1; transform: scale(1); }
                 }
-                .rp-success-title { font-size: 1.3rem; font-weight: 700; color: #e8f0fe; margin-bottom: 8px; }
+                .rp-success-title { font-size: 1.32rem; font-weight: 700; color: #f8fbff; margin-bottom: 8px; }
                 .rp-success-msg   { font-size: 13px; color: #4d6380; line-height: 1.6; margin-bottom: 20px; max-width: 320px; }
                 .rp-success-details {
                     width: 100%; background: rgba(255,255,255,.03);

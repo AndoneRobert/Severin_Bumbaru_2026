@@ -17,6 +17,7 @@ const IssueMarkersLayer = ({
     onVote,
     popupMaxWidth = 240,
     renderPopup,
+    showPopup = true,
 }) => (
     <>
         {issues.map((issue) => {
@@ -30,13 +31,15 @@ const IssueMarkersLayer = ({
                     icon={getIssueIcon(issue.status, issue.id === selectedIssueId)}
                     eventHandlers={onSelectIssue ? { click: () => onSelectIssue(issue) } : undefined}
                 >
-                    <Popup maxWidth={popupMaxWidth}>
-                        {renderPopup ? (
-                            renderPopup(issue)
-                        ) : (
-                            <IssuePopupCard issue={issue} onOpenDetails={onSelectIssue} onVote={onVote} />
-                        )}
-                    </Popup>
+                    {showPopup && (
+                        <Popup maxWidth={popupMaxWidth}>
+                            {renderPopup ? (
+                                renderPopup(issue)
+                            ) : (
+                                <IssuePopupCard issue={issue} onOpenDetails={onSelectIssue} onVote={onVote} />
+                            )}
+                        </Popup>
+                    )}
                 </Marker>
             );
         })}

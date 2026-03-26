@@ -33,12 +33,18 @@ const IssuesMapPanel = ({
                         popupMaxWidth={220}
                         renderPopup={(issue) => (
                             <div className="ci-map-popup">
+                                <div className="ci-map-popup-top">
+                                    <div className="ci-map-popup-icon">{categories.find((c) => c.value === issue.category)?.label?.split(' ')[0] || '📋'}</div>
+                                    <div className="ci-map-popup-meta">
+                                        <span className="ci-map-popup-category">{issue.category || 'General'}</span>
+                                        <StatusBadge status={issue.status} />
+                                    </div>
+                                </div>
                                 <strong>{issue.title}</strong>
-                                <div style={{ display: 'flex', gap: '6px', margin: '6px 0', flexWrap: 'wrap' }}><StatusBadge status={issue.status} /></div>
-                                <p>{issue.description?.substring(0, 80)}...</p>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '8px', marginTop: '6px' }}>
-                                    <span style={{ fontSize: '12px', color: '#64748b' }}>▲ {issue.votes || 0} voturi</span>
-                                    <button style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }} onClick={() => onSelectIssue(issue)}>Detalii →</button>
+                                <p>{issue.description ? `${issue.description.substring(0, 110)}${issue.description.length > 110 ? '...' : ''}` : 'Fără descriere disponibilă.'}</p>
+                                <div className="ci-map-popup-footer">
+                                    <span className="ci-map-popup-votes">▲ {issue.votes || 0} voturi</span>
+                                    <button className="ci-map-popup-btn" onClick={() => onSelectIssue(issue)}>Detalii →</button>
                                 </div>
                             </div>
                         )}
