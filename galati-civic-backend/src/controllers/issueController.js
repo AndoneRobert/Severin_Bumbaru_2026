@@ -75,6 +75,16 @@ const updateIssue = async (req, res) => {
     }
 };
 
+const updateIssueStatus = async (req, res) => {
+    const { status } = req.body || {};
+    if (status === undefined) {
+        return res.status(400).json({ error: 'Câmpul status este obligatoriu.' });
+    }
+
+    req.body = { status };
+    return updateIssue(req, res);
+};
+
 const deleteIssue = async (req, res) => {
     const { id } = req.params;
 
@@ -120,6 +130,7 @@ module.exports = {
     listMyIssues,
     createIssue,
     updateIssue,
+    updateIssueStatus,
     deleteIssue,
     voteIssue,
     flagIssue,
