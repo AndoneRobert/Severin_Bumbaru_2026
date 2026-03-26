@@ -311,9 +311,89 @@ export const pageStyles = `
     .ci-si-meta { display: flex; justify-content: space-between; font-size: 10px; color: #4d6380; }
 
     /* Popup hartă (leaflet e în DOM alb) */
-    .ci-map-popup { padding: 12px; font-family: 'Outfit', sans-serif; background: #fff; min-width: 180px; }
-    .ci-map-popup strong { display: block; font-size: 13px; color: #1e293b; margin-bottom: 6px; font-weight: 700; }
-    .ci-map-popup p { font-size: 12px; color: #64748b; line-height: 1.5; margin-bottom: 8px; }
+    .leaflet-popup-content-wrapper {
+        background: linear-gradient(160deg, rgba(9,16,34,.97), rgba(18,36,64,.95)) !important;
+        border: 1px solid rgba(96,165,250,.26) !important;
+        border-radius: 16px !important;
+        box-shadow: 0 18px 44px rgba(2,6,23,.55) !important;
+        overflow: hidden;
+    }
+    .leaflet-popup-content { margin: 0 !important; }
+    .leaflet-popup-tip {
+        background: rgba(16,30,54,.95) !important;
+        border: 1px solid rgba(96,165,250,.2) !important;
+    }
+
+    .ci-map-popup {
+        padding: 14px;
+        min-width: 230px;
+        max-width: 260px;
+        color: #e8f0fe;
+        font-family: 'Outfit', sans-serif;
+        background:
+            radial-gradient(circle at 100% 0, rgba(59,130,246,.2), transparent 40%),
+            radial-gradient(circle at 0 100%, rgba(168,85,247,.15), transparent 48%);
+    }
+    .ci-map-popup-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .ci-map-popup-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        font-size: 18px;
+        background: rgba(255,255,255,.08);
+        border: 1px solid rgba(255,255,255,.15);
+        flex-shrink: 0;
+    }
+    .ci-map-popup-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .ci-map-popup-category {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: .4px;
+        color: #9fb6d9;
+        font-weight: 600;
+    }
+    .ci-map-popup strong {
+        display: block;
+        color: #f8fbff;
+        font-size: 14px;
+        line-height: 1.35;
+        margin-bottom: 6px;
+        font-weight: 700;
+    }
+    .ci-map-popup p {
+        color: #b7c7df;
+        font-size: 12px;
+        line-height: 1.6;
+        margin-bottom: 10px;
+    }
+    .ci-map-popup-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-top: 1px solid rgba(255,255,255,.14);
+        padding-top: 9px;
+    }
+    .ci-map-popup-votes { font-size: 12px; color: #9fb6d9; font-weight: 500; }
+    .ci-map-popup-btn {
+        border: 1px solid rgba(96,165,250,.36);
+        background: rgba(59,130,246,.16);
+        color: #dbeafe;
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .2px;
+        cursor: pointer;
+        transition: all .18s ease;
+    }
+    .ci-map-popup-btn:hover {
+        background: rgba(59,130,246,.3);
+        border-color: rgba(96,165,250,.6);
+        transform: translateY(-1px);
+    }
 
     /* Modal */
     .ci-overlay {

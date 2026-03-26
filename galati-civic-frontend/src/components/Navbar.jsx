@@ -168,12 +168,11 @@ export default function Navbar() {
 
                 {/* Links desktop */}
                 <div className={m(`nav-links ${mobileOpen ? 'nav-links-open' : ''}`)}>
-                    <Link to="/" className={m(`nav-link ${isActive('/') ? 'nav-link-active' : ''}`)}>Hartă</Link>
+                    <Link to="/" className={m(`nav-link ${isActive('/') ? 'nav-link-active' : ''}`)}>Meniu</Link>
                     <Link to="/dashboard" className={m(`nav-link ${isActive('/dashboard') ? 'nav-link-active' : ''}`)}>Sesizări</Link>
                     {isAuthenticated && (
                         <>
                             <Link to="/my-issues" className={m(`nav-link ${isActive('/my-issues') ? 'nav-link-active' : ''}`)}>Sesizările mele</Link>
-                            <Link to="/create-issue" className={m(`nav-link ${isActive('/create-issue') ? 'nav-link-active' : ''}`)}>Raportează</Link>
                         </>
                     )}
                     {isAdmin && (
@@ -204,9 +203,7 @@ export default function Navbar() {
                                         {isAdmin && <span className={m('dropdown-role')}>Administrator</span>}
                                     </div>
                                     <div className={m('dropdown-divider')} />
-                                    <Link to="/profile" className={m('dropdown-item')} onClick={() => setMenuOpen(false)}>Profilul meu</Link>
                                     <Link to="/my-issues" className={m('dropdown-item')} onClick={() => setMenuOpen(false)}>Sesizările mele</Link>
-                                    <Link to="/create-issue" className={m('dropdown-item')} onClick={() => setMenuOpen(false)}>Raportează o sesizare</Link>
                                     {isAdmin && (
                                         <Link to="/admin" className={m('dropdown-item dropdown-item-admin')} onClick={() => setMenuOpen(false)}>Panou Admin</Link>
                                     )}
