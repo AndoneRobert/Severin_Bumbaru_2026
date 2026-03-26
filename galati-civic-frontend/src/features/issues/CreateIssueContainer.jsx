@@ -56,8 +56,8 @@ const StatusBadge = ({ status }) => {
     return <span className={`ci-badge ${b.cls}`}>{b.label}</span>;
 };
 
-const CreateIssueContainer = () => {
-    const [tab, setTab] = useState('my');
+const CreateIssueContainer = ({ initialTab = 'my' }) => {
+    const [tab, setTab] = useState(initialTab === 'new' ? 'new' : 'my');
     const [selectedIssue, setSelectedIssue] = useState(null);
     const [editingIssue, setEditingIssue] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -102,6 +102,11 @@ const CreateIssueContainer = () => {
         };
         load();
     }, [loadIssues, showToast]);
+
+    useEffect(() => {
+        setTab(initialTab === 'new' ? 'new' : 'my');
+        if (initialTab === 'new') setStep(1);
+    }, [initialTab, setStep]);
 
     const resolveSubmitErrorMessage = (error) => {
         const status = error?.response?.status;

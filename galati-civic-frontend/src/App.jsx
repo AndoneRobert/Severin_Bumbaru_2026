@@ -20,7 +20,8 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/my-issues" element={<CreateIssue />} />
+              <Route path="/my-issues" element={<CreateIssue initialTab="my" />} />
+              <Route path="/create-issue" element={<CreateIssue initialTab="new" />} />
               <Route path="/login" element={<Login />} />
               <Route path="/admin" element={<Admin />} />
               {/* <Routes path="/register" element={<Register />} />      */}

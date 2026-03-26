@@ -2,9 +2,9 @@ import React from 'react';
 import CreateIssueContainer from '../features/issues/CreateIssueContainer';
 import styles from './CreateIssue.module.css';
 
-const CreateIssue = () => (
+const CreateIssue = ({ initialTab = 'my' }) => (
     <div className={styles.page}>
-        <CreateIssueContainer />
+        <CreateIssueContainer initialTab={initialTab} />
     </div>
 );
 

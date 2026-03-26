@@ -67,11 +67,7 @@ export default function Navbar() {
 
     const openReport = () => {
         if (!isAuthenticated) { navigate('/login'); return; }
-        setReportOpen(true);
-        setStep(1);
-        setForm({ title: '', description: '', category: 'Infrastructură', priority: 'Medie' });
-        setLocation(null);
-        setFormErrors({});
+        navigate('/create-issue');
     };
 
     const closeReport = () => { setReportOpen(false); setStep(1); };
@@ -175,7 +171,10 @@ export default function Navbar() {
                     <Link to="/" className={m(`nav-link ${isActive('/') ? 'nav-link-active' : ''}`)}>🗺 Hartă</Link>
                     <Link to="/dashboard" className={m(`nav-link ${isActive('/dashboard') ? 'nav-link-active' : ''}`)}>📋 Sesizări</Link>
                     {isAuthenticated && (
-                        <Link to="/my-issues" className={m(`nav-link ${isActive('/my-issues') ? 'nav-link-active' : ''}`)}>📂 Ale mele</Link>
+                        <>
+                            <Link to="/my-issues" className={m(`nav-link ${isActive('/my-issues') ? 'nav-link-active' : ''}`)}>📂 Sesizările mele</Link>
+                            <Link to="/create-issue" className={m(`nav-link ${isActive('/create-issue') ? 'nav-link-active' : ''}`)}>✚ Raportează</Link>
+                        </>
                     )}
                     {isAdmin && (
                         <Link to="/admin" className={m(`nav-link nav-link-admin ${isActive('/admin') ? 'nav-link-active' : ''}`)}>⚙️ Admin</Link>
@@ -184,7 +183,7 @@ export default function Navbar() {
 
                 {/* Dreapta */}
                 <div className={m('nav-right')}>
-                    {/* Buton Raportează — deschide panoul */}
+                    {/* Buton Raportează — navighează către pagina dedicată */}
                     <button className={m('nav-report-btn')} onClick={openReport}>
                         <span className={m('nav-report-pulse')} />
                         <span>✚</span>
@@ -208,6 +207,7 @@ export default function Navbar() {
                                     <div className={m('dropdown-divider')} />
                                     <Link to="/profile" className={m('dropdown-item')} onClick={() => setMenuOpen(false)}>👤 Profilul meu</Link>
                                     <Link to="/my-issues" className={m('dropdown-item')} onClick={() => setMenuOpen(false)}>📋 Sesizările mele</Link>
+                                    <Link to="/create-issue" className={m('dropdown-item')} onClick={() => setMenuOpen(false)}>✚ Raportează o sesizare</Link>
                                     {isAdmin && (
                                         <Link to="/admin" className={m('dropdown-item dropdown-item-admin')} onClick={() => setMenuOpen(false)}>⚙️ Panou Admin</Link>
                                     )}
