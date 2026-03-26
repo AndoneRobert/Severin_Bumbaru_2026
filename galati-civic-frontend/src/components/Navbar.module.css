@@ -374,17 +374,43 @@
 
                 /* Responsive */
                 @media (max-width: 768px) {
-                    .navbar { padding: 0 16px; }
+                    .navbar {
+                        padding: max(0px, env(safe-area-inset-top)) 12px 0;
+                        gap: 8px;
+                    }
+                    .nav-brand a { font-size: 1.1rem; }
+                    .nav-logo-icon { width: 24px; height: 24px; font-size: 10px; }
+                    .nav-right { gap: 6px; }
+                    .nav-auth-btns { display: none; }
+                    .nav-avatar-btn {
+                        min-height: 40px;
+                        padding: 6px 8px;
+                        border-radius: 9px;
+                    }
                     .nav-hamburger { display: flex; }
                     .nav-links {
                         display: none; position: absolute; top: 60px; left: 0; right: 0;
                         background: rgba(8,15,30,.98); backdrop-filter: blur(20px);
                         border-bottom: 1px solid rgba(255,255,255,.07);
                         flex-direction: column; padding: 12px 16px 16px; gap: 4px; align-items: stretch;
+                        max-height: calc(100vh - 60px);
+                        overflow-y: auto;
                     }
                     .nav-links-open { display: flex; }
-                    .nav-link { padding: 10px 14px; }
+                    .nav-link { padding: 12px 14px; font-size: 15px; }
                     .nav-username { display: none; }
+                    .nav-dropdown {
+                        right: 0;
+                        left: auto;
+                        min-width: min(300px, calc(100vw - 16px));
+                    }
+                    .nav-report-btn {
+                        width: 40px;
+                        height: 40px;
+                        padding: 0;
+                        justify-content: center;
+                        border-radius: 10px;
+                    }
                     .nav-report-btn span:last-child { display: none; }
                     .rp-panel { width: 100vw; }
                     .rp-prio-row { grid-template-columns: repeat(2, 1fr); }

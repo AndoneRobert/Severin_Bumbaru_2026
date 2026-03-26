@@ -242,22 +242,22 @@ export default function Dashboard() {
                         <tbody>
                             {filtered.map(issue => (
                                 <tr key={issue.id} className="dash-row">
-                                    <td className="dash-cell-id">#{issue.id}</td>
-                                    <td className="dash-cell-title">
+                                    <td className="dash-cell-id" data-label="ID">#{issue.id}</td>
+                                    <td className="dash-cell-title" data-label="Sesizare">
                                         <div className="dash-title-text">{issue.title}</div>
                                         <div className="dash-desc-text">
                                             {issue.description?.substring(0, 60)}{issue.description?.length > 60 ? '...' : ''}
                                         </div>
                                     </td>
-                                    <td>
+                                    <td data-label="Categorie">
                                         <span className="dash-cat-badge">{issue.category || '—'}</span>
                                     </td>
-                                    <td>
+                                    <td data-label="Prioritate">
                                         <span className={`priority-chip priority-${(issue.priority || '').toLowerCase().replace('ă', 'a').replace('î', 'i').replace('â', 'a')}`}>
                                             {issue.priority || '—'}
                                         </span>
                                     </td>
-                                    <td>
+                                    <td data-label="Status">
                                         {isAdmin ? (
                                             <select
                                                 className="status-select"
@@ -271,16 +271,16 @@ export default function Dashboard() {
                                             <StatusBadge status={issue.status} />
                                         )}
                                     </td>
-                                    <td className="dash-cell-votes">
+                                    <td className="dash-cell-votes" data-label="Voturi">
                                         <span className="votes-chip">▲ {issue.votes || 0}</span>
                                     </td>
-                                    <td className="dash-cell-date">
+                                    <td className="dash-cell-date" data-label="Data">
                                         {issue.created_at
                                             ? new Date(issue.created_at).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' })
                                             : '—'}
                                     </td>
                                     {isAdmin && (
-                                        <td className="dash-cell-actions">
+                                        <td className="dash-cell-actions" data-label="Acțiuni">
                                             <button
                                                 className="action-btn action-delete"
                                                 onClick={() => handleDeleteIssue(issue.id)}
@@ -528,11 +528,56 @@ export default function Dashboard() {
                 .badge-done     { background: rgba(16,185,129,.12); color: #6ee7b7; border: 1px solid rgba(16,185,129,.2); }
                 .badge-review   { background: rgba(59,130,246,.12); color: #93c5fd; border: 1px solid rgba(59,130,246,.2); }
 
-                @media (max-width: 768px) {
+                @media (max-width: 900px) {
                     .dash-page { padding: 20px 16px 40px; }
-                    .dash-table { display: block; overflow-x: auto; }
+                    .dash-toolbar { flex-direction: column; align-items: stretch; }
+                    .dash-search-wrap { width: 100%; min-height: 44px; }
+                    .dash-filters { width: 100%; }
+                    .dash-select {
+                        min-height: 44px;
+                        flex: 1 1 calc(50% - 6px);
+                    }
+                    .dash-table-wrap { background: transparent; border: none; }
+                    .dash-table { border-collapse: separate; border-spacing: 0 10px; }
+                    .dash-table thead { display: none; }
+                    .dash-table tbody { display: grid; gap: 10px; }
+                    .dash-row {
+                        display: grid;
+                        gap: 8px;
+                        background: var(--card-bg, rgba(15,26,46,.8));
+                        border: 1px solid var(--card-border, rgba(255,255,255,.09));
+                        border-radius: 12px;
+                        padding: 10px 12px;
+                    }
+                    .dash-table td {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        gap: 12px;
+                        padding: 0;
+                        border: none;
+                    }
+                    .dash-table td::before {
+                        content: attr(data-label);
+                        font-size: 11px;
+                        color: var(--text-muted, #4d6380);
+                        text-transform: uppercase;
+                        letter-spacing: .05em;
+                        flex-shrink: 0;
+                    }
+                    .dash-cell-title {
+                        align-items: flex-start !important;
+                        flex-direction: column;
+                    }
+                    .dash-cell-title::before { margin-bottom: 2px; }
+                    .dash-cell-actions { justify-content: flex-end !important; }
+                    .dash-cell-actions::before { margin-right: auto; }
                     .dash-stats-row { gap: 8px; }
                     .dash-stat { min-width: 100px; padding: 12px 14px; }
+                    .dash-count-bar { text-align: left; }
+                }
+                @media (max-width: 520px) {
+                    .dash-select { flex-basis: 100%; }
                 }
             `}</style>
         </div>
