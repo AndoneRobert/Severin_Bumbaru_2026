@@ -1,17 +1,3 @@
-<<<<<<< ours
-import React, { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
-
-import BaseMap from '../features/map/components/BaseMap';
-import IssueMarkersLayer from '../features/map/components/IssueMarkersLayer';
-import LocationPickerLayer from '../features/map/components/LocationPickerLayer';
-
-import { createIssue, flagIssue, getAllIssues, replyIssue, updateIssue, voteIssue } from '../services/issuesApi';
-
-import styles from './Home.module.css';
-
-const m = (classNames) => classNames.split(/\s+/).filter(Boolean).map((cn) => styles[cn] || cn).join(' ');
-=======
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import axios from 'axios';
@@ -38,7 +24,6 @@ const STATUS_ICONS = {
     'Nou': makeIcon('#ef4444'), 'În lucru': makeIcon('#f59e0b'),
     'Rezolvat': makeIcon('#10b981'), 'În verificare': makeIcon('#3b82f6'),
 };
->>>>>>> theirs
 
 const CATEGORIES = [
     { value: 'Infrastructură', icon: '🛣️' }, { value: 'Iluminat', icon: '💡' },
@@ -123,28 +108,6 @@ const Home = () => {
     const isAdmin = user?.role === 'admin' || user?.email === 'admin@galati.ro';
     const useMock = import.meta.env.VITE_USE_MOCK === 'true';
 
-<<<<<<< ours
-    const showToast = useCallback((msg, type = 'info') => {
-        setToast({ msg, show: true, type });
-        setTimeout(() => setToast({ msg: '', show: false, type: 'info' }), 3000);
-    }, []);
-
-    const fetchIssues = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            if (useMock) {
-                await new Promise(r => setTimeout(r, 600));
-                setIssues(MOCK_ISSUES);
-            } else {
-                const data = await getAllIssues();
-                setIssues(data);
-            }
-        } catch { setIssues(MOCK_ISSUES); }
-        finally { setIsLoading(false); }
-    }, [useMock]);
-
-    useEffect(() => { fetchIssues(); }, [fetchIssues]);
-=======
     const { toast, showToast } = useToast({ duration: 3000 });
     const { form: formData, setForm: setFormData, resetForm } = useIssueForm({
         initialForm: { title: '', description: '', category: 'Infrastructură', priority: 'Medie', lat: null, lng: null },
@@ -169,20 +132,13 @@ const Home = () => {
     useEffect(() => {
         loadIssues().catch(() => setIssues(MOCK_ISSUES));
     }, [loadIssues, setIssues]);
->>>>>>> theirs
 
     const handleVote = async (id, e) => {
         e?.stopPropagation();
         if (!user) { showToast('Trebuie să fii logat pentru a vota!', 'error'); return; }
         if (votedIssues.has(id)) { showToast('Ai votat deja această sesizare.', 'error'); return; }
         try {
-<<<<<<< ours
-            await voteIssue(id, user.token);
-            setVotedIssues(prev => new Set([...prev, id]));
-            fetchIssues();
-=======
             await voteIssue(id);
->>>>>>> theirs
             showToast('Vot înregistrat! ✓', 'success');
         } catch { showToast('Ai votat deja.', 'error'); }
     };
@@ -253,20 +209,9 @@ const Home = () => {
         }
         setSubmitting(true);
         try {
-<<<<<<< ours
-            const newIssue = { id: Date.now(), ...formData, lat: newLocation.lat, lng: newLocation.lng, votes: 0, status: 'Nou', created_at: new Date().toISOString(), admin_reply: null };
-            if (useMock) {
-                await new Promise(r => setTimeout(r, 700));
-                setIssues(prev => [newIssue, ...prev]);
-            } else {
-                const token = (await getToken?.()) || user?.token;
-                await createIssue({ ...newIssue, user_id: user?.id ?? null }, token);
-                fetchIssues();
-=======
             await createIssue({ ...formData, lat: newLocation.lat, lng: newLocation.lng, admin_reply: null });
             if (!useMock) {
                 await loadIssues();
->>>>>>> theirs
             }
             setNewLocation(null);
             resetForm({ title: '', description: '', category: 'Infrastructură', priority: 'Medie', lat: null, lng: null });
