@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { getAllIssues, updateIssue, deleteIssue as deleteIssueApi } from '../services/issuesApi';
 
 const CATEGORIES = ['Infrastructură', 'Iluminat', 'Apă/Canal', 'Spații verzi', 'Salubritate', 'Altele'];
 const STATUSES = ['Nou', 'În lucru', 'În verificare', 'Rezolvat'];
@@ -35,7 +36,7 @@ export default function Dashboard() {
     const [toast, setToast] = useState({ msg: '', show: false, type: 'info' });
 
     const { user, isAdmin, getToken } = useAuth();
-    const apiUrl = (import.meta.env.VITE_API_URL || 'https://severin-bumbaru-2026.onrender.com/api').replace(/\/+$/, '');
+    const [authToken, setAuthToken] = useState(null);
 
     const showToast = useCallback((msg, type = 'info') => {
         setToast({ msg, show: true, type });
@@ -45,30 +46,51 @@ export default function Dashboard() {
     const fetchIssues = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch(`${apiUrl}/issues`);
-            const data = await res.json();
+            const data = await getAllIssues();
             setIssues(Array.isArray(data) ? data : []);
         } catch {
             showToast('Eroare la încărcarea sesizărilor.', 'error');
         } finally {
             setLoading(false);
         }
-    }, [apiUrl]);
+    }, [showToast]);
 
-    useEffect(() => { fetchIssues(); }, [fetchIssues]);
+    useEffect(() => {
+        fetchIssues();
+    }, [fetchIssues]);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadToken = async () => {
+            if (!user) {
+                setAuthToken(null);
+                return;
+            }
+
+            try {
+                const token = await getToken();
+                if (isMounted) setAuthToken(token);
+            } catch {
+                if (isMounted) setAuthToken(null);
+            }
+        };
+
+        loadToken();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [user, getToken]);
 
     const updateStatus = async (id, newStatus) => {
+        if (!authToken) {
+            showToast('Autentificare necesară pentru actualizare.', 'error');
+            return;
+        }
+
         try {
-            const token = await getToken();
-            const res = await fetch(`${apiUrl}/issues/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ status: newStatus }),
-            });
-            if (!res.ok) throw new Error();
+            await updateIssue(id, { status: newStatus }, authToken);
             setIssues(prev => prev.map(i => i.id === id ? { ...i, status: newStatus } : i));
             showToast(`Status actualizat → ${newStatus}`, 'success');
         } catch {
@@ -76,15 +98,15 @@ export default function Dashboard() {
         }
     };
 
-    const deleteIssue = async (id) => {
+    const handleDeleteIssue = async (id) => {
         if (!window.confirm('Ești sigur că vrei să ștergi această sesizare?')) return;
+        if (!authToken) {
+            showToast('Autentificare necesară pentru ștergere.', 'error');
+            return;
+        }
+
         try {
-            const token = await getToken();
-            const res = await fetch(`${apiUrl}/issues/${id}`, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            if (!res.ok) throw new Error();
+            await deleteIssueApi(id, authToken);
             setIssues(prev => prev.filter(i => i.id !== id));
             showToast('Sesizare ștearsă.', 'success');
         } catch {
@@ -253,7 +275,7 @@ export default function Dashboard() {
                                         <td className="dash-cell-actions">
                                             <button
                                                 className="action-btn action-delete"
-                                                onClick={() => deleteIssue(issue.id)}
+                                                onClick={() => handleDeleteIssue(issue.id)}
                                                 title="Șterge sesizarea"
                                             >
                                                 🗑
