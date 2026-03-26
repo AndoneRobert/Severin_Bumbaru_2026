@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
 import { useAuth } from '../context/AuthContext';
 import { useIssues } from '../features/issues/hooks/useIssues';
@@ -7,7 +6,8 @@ import { useIssueForm } from '../features/issues/hooks/useIssueForm';
 import { useToast } from '../features/issues/hooks/useToast';
 import L from 'leaflet';
 import styles from './Home.module.css';
-import { flagIssue, updateIssue, replyIssue } from '../services/issuesApi';
+import { apiBaseUrl, apiClient } from '../services/apiClient';
+import { flagIssue, replyIssue } from '../services/issuesApi';
 import BaseMap from '../features/map/components/BaseMap';
 import IssueMarkersLayer from '../features/map/components/IssueMarkersLayer';
 import LocationPickerLayer from '../features/map/components/LocationPickerLayer';
@@ -106,7 +106,7 @@ const Home = () => {
 
     const { user, getToken, isAdmin } = useAuth();
     const useMock = import.meta.env.VITE_USE_MOCK === 'true';
-    const apiUrl = (import.meta.env.VITE_API_URL || 'https://severin-bumbaru-2026.onrender.com/api').replace(/\/+$/, '');
+    const apiUrl = apiBaseUrl;
 
     const { toast, showToast } = useToast({ duration: 3000 });
     const { form: formData, setForm: setFormData, resetForm } = useIssueForm({
@@ -119,9 +119,10 @@ const Home = () => {
         votedIssues,
         loadIssues,
         createIssue,
+        updateIssue,
         voteIssue,
     } = useIssues({
-        apiClient: axios,
+        apiClient,
         user,
         getToken,
         apiUrl,
@@ -132,6 +133,8 @@ const Home = () => {
     useEffect(() => {
         loadIssues().catch(() => setIssues(MOCK_ISSUES));
     }, [loadIssues, setIssues]);
+
+    const getAuthToken = async () => (await getToken?.()) || user?.token;
 
     const handleVote = async (id, e) => {
         e?.stopPropagation();
@@ -165,7 +168,8 @@ const Home = () => {
             return;
         }
         try {
-            await flagIssue(id, user.token);
+            const token = await getAuthToken();
+            await flagIssue(id, token);
             setFlaggedIssues(prev => new Set([...prev, id]));
             showToast('Sesizare raportată. Mulțumim!', 'success');
         } catch { showToast('Ai raportat deja.', 'error'); }
@@ -180,7 +184,7 @@ const Home = () => {
             return;
         }
         try {
-            await updateIssue(id, { status: newStatus }, user.token);
+            await updateIssue(id, { status: newStatus });
             showToast(`Status → ${newStatus}`, 'success');
             await loadIssues();
         } catch { showToast('Eroare la actualizare.', 'error'); }
@@ -195,7 +199,8 @@ const Home = () => {
             setShowReplyBox(null); setAdminReply(''); return;
         }
         try {
-            await replyIssue(id, adminReply, user.token);
+            const token = await getAuthToken();
+            await replyIssue(id, adminReply, token);
             showToast('Răspuns trimis!', 'success');
             setShowReplyBox(null); setAdminReply(''); await loadIssues();
         } catch { showToast('Eroare la trimitere.', 'error'); }
