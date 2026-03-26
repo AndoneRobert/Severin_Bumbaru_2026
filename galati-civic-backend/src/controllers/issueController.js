@@ -56,7 +56,7 @@ const listIssues = async (_req, res) => {
 
 const listMyIssues = async (req, res) => {
     try {
-        const data = await issuesService.listIssuesByUser(req.user.id, req.supabase);
+        const data = await issueService.listIssuesByUser(req.user.id, req.supabase);
         return res.json(data);
     } catch (err) {
         console.error('[DB ERROR GET MY ISSUES]:', err);
@@ -80,7 +80,7 @@ const createIssue = async (req, res) => {
 
         for (const candidate of payloadVariants) {
             try {
-                const data = await issuesService.createIssue(candidate, req.supabase);
+                const data = await issueService.createIssue(candidate, req.supabase);
                 return res.status(201).json(data);
             } catch (err) {
                 lastError = err;
@@ -113,7 +113,7 @@ const updateIssue = async (req, res) => {
     }
 
     try {
-        const data = await issuesService.updateIssue(id, updatePayload, req.supabase);
+        const data = await issueService.updateIssue(id, updatePayload, req.supabase);
         if (!data) return res.status(404).json({ error: 'Raportul nu a fost găsit.' });
         return res.json(data);
     } catch (err) {
@@ -136,7 +136,7 @@ const deleteIssue = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const count = await issuesService.deleteIssue(id, req.supabase);
+        const count = await issueService.deleteIssue(id, req.supabase);
         if (!count) return res.status(404).json({ error: 'Raportul nu a fost găsit.' });
 
         return res.status(204).send();
@@ -149,9 +149,9 @@ const deleteIssue = async (req, res) => {
 const voteIssue = async (req, res) => {
     const { id } = req.params;
     try {
-        const issue = await issuesService.getIssueVotes(id, req.supabase);
+        const issue = await issueService.getIssueVotes(id, req.supabase);
         const nextVotes = (issue.votes || 0) + 1;
-        const data = await issuesService.updateIssueVotes(id, nextVotes, req.supabase);
+        const data = await issueService.updateIssueVotes(id, nextVotes, req.supabase);
 
         return res.json(data);
     } catch (err) {
