@@ -12,6 +12,38 @@ const mapIssuePayload = (body = {}) => ({
     user_id: body.user_id ?? null,
 });
 
+const dedupePayloadVariants = (variants) => {
+    const seen = new Set();
+    return variants.filter((variant) => {
+        const key = JSON.stringify(variant);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+};
+
+const createPayloadVariants = (payload) => {
+    const {
+        title,
+        description,
+        lat,
+        lng,
+        user_id,
+    } = payload;
+
+    return dedupePayloadVariants([
+        payload,
+        { ...payload, category_id: undefined },
+        { ...payload, category: undefined, category_id: undefined },
+        { title, description, lat, lng, user_id, priority: payload.priority, status: payload.status },
+        { title, description, lat, lng, user_id },
+        { title, description, latitude: lat, longitude: lng, user_id, priority: payload.priority, status: payload.status },
+        { title, description, latitude: lat, longitude: lng, user_id },
+    ]).map((candidate) => Object.fromEntries(
+        Object.entries(candidate).filter(([, value]) => value !== undefined),
+    ));
+};
+
 const listIssues = async (_req, res) => {
     try {
         const data = await issueService.listIssues();
@@ -43,11 +75,26 @@ const createIssue = async (req, res) => {
     }
 
     try {
-        const data = await issuesService.createIssue(payload, req.supabase);
-        return res.status(201).json(data);
-    } catch (err) {
-        console.error('[DB ERROR POST ISSUE]:', err);
-        return res.status(500).json({ error: 'Eroare la inserarea raportului.' });
+        const payloadVariants = createPayloadVariants(payload);
+        let lastError = null;
+
+        for (const candidate of payloadVariants) {
+            try {
+                const data = await issuesService.createIssue(candidate, req.supabase);
+                return res.status(201).json(data);
+            } catch (err) {
+                lastError = err;
+            }
+        }
+
+        console.error('[DB ERROR POST ISSUE]:', lastError);
+        return res.status(500).json({
+            error: 'Eroare la inserarea raportului.',
+            details: lastError?.message || 'Inserarea a eșuat pentru toate variantele de payload.',
+        });
+    } catch (unexpectedError) {
+        console.error('[DB ERROR POST ISSUE UNEXPECTED]:', unexpectedError);
+        return res.status(500).json({ error: 'Eroare internă la procesarea raportului.' });
     }
 };
 

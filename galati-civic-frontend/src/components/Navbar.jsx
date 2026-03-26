@@ -100,6 +100,9 @@ export default function Navbar() {
         if (status === 400 && apiMessage) {
             return `Date invalide: ${apiMessage}`;
         }
+        if (status === 500) {
+            return apiMessage || 'Serverul a întâmpinat o eroare la trimitere. Încearcă din nou în câteva momente.';
+        }
         if (apiMessage) return apiMessage;
         if (error?.message) return error.message;
         return fallbackMessage;
@@ -114,12 +117,33 @@ export default function Navbar() {
                 await new Promise(r => setTimeout(r, 900));
             } else {
                 const token = (await getToken?.()) || user?.token;
-                await apiClient.post('/issues', {
-                    ...form,
-                    lat: location.lat,
-                    lng: location.lng,
-                    user_id: user?.id ?? null,
-                }, authConfig(token));
+                const response = await fetch(`${apiUrl}/issues`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
+                    body: JSON.stringify({
+                        ...form,
+                        lat: location.lat,
+                        lng: location.lng,
+                        user_id: user?.id ?? null,
+                    }),
+                });
+                if (!response.ok) {
+                    let apiMessage = '';
+                    try {
+                        const payload = await response.json();
+                        apiMessage = payload?.error || payload?.message || '';
+                    } catch {
+                        // ignore parse errors and keep fallback below
+                    }
+
+                    const submitError = new Error('Eroare la trimitere. Încearcă din nou.');
+                    submitError.status = response.status;
+                    submitError.apiMessage = apiMessage;
+                    throw submitError;
+                }
             }
             setStep(3);
         } catch (error) {

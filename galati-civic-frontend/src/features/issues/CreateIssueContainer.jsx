@@ -114,6 +114,9 @@ const CreateIssueContainer = () => {
         if (status === 400 && apiMessage) {
             return `Date invalide: ${apiMessage}`;
         }
+        if (status === 500) {
+            return apiMessage || 'Serverul a întâmpinat o eroare la trimitere. Încearcă din nou în câteva momente.';
+        }
 
         if (apiMessage) return apiMessage;
         return 'Eroare la trimitere. Încearcă din nou.';
