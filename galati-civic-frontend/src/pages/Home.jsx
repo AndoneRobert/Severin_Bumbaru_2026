@@ -104,8 +104,7 @@ const Home = () => {
     const [activeView, setActiveView] = useState('map');
     const [urgentBannerClosed, setUrgentBannerClosed] = useState(false);
 
-    const { user, getToken } = useAuth();
-    const isAdmin = user?.role === 'admin' || user?.email === 'admin@galati.ro';
+    const { user, getToken, isAdmin } = useAuth();
     const useMock = import.meta.env.VITE_USE_MOCK === 'true';
     const apiUrl = (import.meta.env.VITE_API_URL || 'https://severin-bumbaru-2026.onrender.com/api').replace(/\/+$/, '');
 

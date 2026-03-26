@@ -12,6 +12,17 @@ const listIssues = async () => {
     return data || [];
 };
 
+const listIssuesByUser = async (userId) => {
+    const { data, error } = await supabase
+        .from(issuesTable)
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+};
+
 const createIssue = async (payload) => {
     const { data, error } = await supabase
         .from(issuesTable)
@@ -71,6 +82,7 @@ const updateIssueVotes = async (id, votes) => {
 module.exports = {
     issuesTable,
     listIssues,
+    listIssuesByUser,
     createIssue,
     updateIssue,
     deleteIssue,

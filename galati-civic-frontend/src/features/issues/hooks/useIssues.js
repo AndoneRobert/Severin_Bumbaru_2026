@@ -1,5 +1,68 @@
 import { useCallback, useState } from 'react';
 
+const OWNED_ISSUES_KEY_PREFIX = 'galati_civic_owned_issue_ids';
+
+const getOwnedIssuesStorageKey = (user) => {
+    const owner = user?.id || user?.email;
+    return owner ? `${OWNED_ISSUES_KEY_PREFIX}:${owner}` : null;
+};
+
+const loadOwnedIssueIds = (user) => {
+    if (typeof window === 'undefined') return new Set();
+    const key = getOwnedIssuesStorageKey(user);
+    if (!key) return new Set();
+    try {
+        const value = window.localStorage.getItem(key);
+        const parsed = value ? JSON.parse(value) : [];
+        return new Set(Array.isArray(parsed) ? parsed : []);
+    } catch {
+        return new Set();
+    }
+};
+
+const persistOwnedIssueId = (user, issueId) => {
+    if (typeof window === 'undefined' || issueId == null) return;
+    const key = getOwnedIssuesStorageKey(user);
+    if (!key) return;
+    const next = loadOwnedIssueIds(user);
+    next.add(issueId);
+    window.localStorage.setItem(key, JSON.stringify([...next]));
+};
+
+const isIssueOwnedByUser = (issue, user, storedOwnedIssueIds = new Set()) => {
+    if (!issue || !user) return false;
+    if (issue.isOwn === true) return true;
+    if (storedOwnedIssueIds.has(issue.id)) return true;
+
+    const userId = user.id;
+    const userEmail = user.email?.toLowerCase?.();
+
+    const issueOwnerId = issue.user_id
+        ?? issue.userId
+        ?? issue.owner_id
+        ?? issue.ownerId
+        ?? issue.profile_id
+        ?? issue.profileId
+        ?? issue.author_id
+        ?? issue.authorId
+        ?? issue.created_by
+        ?? issue.created_by_id;
+
+    if (userId && issueOwnerId && String(issueOwnerId) === String(userId)) return true;
+
+    const issueOwnerEmail = issue.user_email
+        ?? issue.userEmail
+        ?? issue.email
+        ?? issue.owner_email
+        ?? issue.ownerEmail
+        ?? issue.reporter_email
+        ?? issue.reporterEmail
+        ?? issue.created_by_email
+        ?? issue.createdByEmail;
+
+    return !!(userEmail && issueOwnerEmail && String(issueOwnerEmail).toLowerCase() === userEmail);
+};
+
 export const useIssues = ({
     apiClient,
     user,
@@ -40,16 +103,20 @@ export const useIssues = ({
                 allReq,
                 apiClient.get(`${apiUrl}/issues/my`, await authHeaders()),
             ]);
+            const ownedIssueIds = loadOwnedIssueIds(user);
+            const myIssuesFromMineEndpoint = (mineRes.data || []).filter((issue) => isIssueOwnedByUser(issue, user, ownedIssueIds));
+            const myIssuesFromAllIssues = (allRes.data || []).filter((issue) => isIssueOwnedByUser(issue, user, ownedIssueIds));
+
             setIssues(allRes.data);
-            setMyIssues(mineRes.data);
-            return { issues: allRes.data, myIssues: mineRes.data };
+            setMyIssues(myIssuesFromMineEndpoint.length > 0 ? myIssuesFromMineEndpoint : myIssuesFromAllIssues);
+            return { issues: allRes.data, myIssues: myIssuesFromMineEndpoint.length > 0 ? myIssuesFromMineEndpoint : myIssuesFromAllIssues };
         } catch (error) {
             onError?.(error);
             throw error;
         } finally {
             setIsLoading(false);
         }
-    }, [apiClient, apiUrl, authHeaders, loadMyIssues, mockIssues, onError, useMock]);
+    }, [apiClient, apiUrl, authHeaders, loadMyIssues, mockIssues, onError, useMock, user]);
 
     const createIssue = useCallback(async (payload) => {
         if (useMock) {
@@ -72,8 +139,9 @@ export const useIssues = ({
             await authHeaders(),
         );
 
+        persistOwnedIssueId(user, response.data?.id);
         return response.data;
-    }, [apiClient, apiUrl, authHeaders, loadMyIssues, useMock, user?.id]);
+    }, [apiClient, apiUrl, authHeaders, loadMyIssues, useMock, user]);
 
     const updateIssue = useCallback(async (issueId, payload) => {
         if (useMock) {

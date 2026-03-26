@@ -1,10 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 
-const issuesRoutes = require('./routes/issuesRoutes');
-const tablesRoutes = require('./routes/tablesRoutes');
-const { issuesTable } = require('./services/issuesService');
-const { readEnabledTables, writeEnabledTables } = require('./services/tablesService');
+const issuesRoutes = require('./routes/issues');
+const { issuesTable } = require('./services/issueService');
 
 const app = express();
 
@@ -42,13 +40,10 @@ app.get('/api/health', (_req, res) => {
         message: 'API-ul Galați Civic este online!',
         timestamp: new Date().toISOString(),
         table: issuesTable,
-        readEnabledTables: [...readEnabledTables],
-        writeEnabledTables: [...writeEnabledTables],
     });
 });
 
 app.use('/api', issuesRoutes);
-app.use('/api', tablesRoutes);
 
 app.use((_req, res) => {
     res.status(404).json({ error: 'Ruta nu a fost găsită.' });

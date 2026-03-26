@@ -77,7 +77,7 @@ export const AuthProvider = ({ children }) => {
         return session?.access_token ?? null;
     };
 
-    const isAdmin = profile?.role === 'admin' || user?.email === 'admin@galati.ro';
+    const isAdmin = profile?.role === 'admin';
 
     const value = {
         user,
