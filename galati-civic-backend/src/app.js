@@ -39,7 +39,7 @@ app.get('/api/health', (_req, res) => {
         status: 'ok',
         message: 'API-ul Galați Civic este online!',
         timestamp: new Date().toISOString(),
-        table: issuesTable,
+        issuesTable,
     });
 });
 

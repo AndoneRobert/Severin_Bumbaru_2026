@@ -120,9 +120,11 @@ export default function Dashboard() {
     return (
         <div className="dash-page">
             {/* Toast */}
-            <div className={`toast toast-${toast.type}${toast.show ? ' toast-show' : ''}`}>
-                {toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : 'ℹ'} {toast.msg}
-            </div>
+            {toast.show && (
+                <div className={`toast toast-${toast.type} toast-show`}>
+                    {toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : 'ℹ'} {toast.msg}
+                </div>
+            )}
 
             {/* Header */}
             <div className="dash-header">

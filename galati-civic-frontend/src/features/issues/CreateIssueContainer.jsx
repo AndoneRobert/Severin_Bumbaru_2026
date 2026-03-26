@@ -111,6 +111,22 @@ const CreateIssueContainer = () => {
         load();
     }, [loadIssues, showToast]);
 
+    const resolveSubmitErrorMessage = (error) => {
+        const status = error?.response?.status;
+        const apiMessage = error?.response?.data?.error;
+
+        if (status === 401) {
+            return 'Sesiunea a expirat. Te rugăm să te autentifici din nou.';
+        }
+
+        if (status === 400 && apiMessage) {
+            return `Date invalide: ${apiMessage}`;
+        }
+
+        if (apiMessage) return apiMessage;
+        return 'Eroare la trimitere. Încearcă din nou.';
+    };
+
     const handleSubmit = async (e) => {
         e?.preventDefault?.();
         const errs = validate();
@@ -121,8 +137,8 @@ const CreateIssueContainer = () => {
             showToast('Sesizare trimisă cu succes! ✓', 'success');
             resetForm();
             setTab('my');
-        } catch {
-            showToast('Eroare la trimitere.', 'error');
+        } catch (error) {
+            showToast(resolveSubmitErrorMessage(error), 'error');
         } finally {
             setSubmitting(false);
         }
