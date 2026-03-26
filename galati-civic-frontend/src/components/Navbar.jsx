@@ -90,6 +90,21 @@ export default function Navbar() {
         return errs;
     };
 
+    const resolveSubmitError = (error, fallbackMessage = 'Eroare la trimitere. Încearcă din nou.') => {
+        const status = error?.status;
+        const apiMessage = error?.apiMessage;
+
+        if (status === 401) {
+            return 'Sesiunea a expirat. Te rugăm să te autentifici din nou.';
+        }
+        if (status === 400 && apiMessage) {
+            return `Date invalide: ${apiMessage}`;
+        }
+        if (apiMessage) return apiMessage;
+        if (error?.message) return error.message;
+        return fallbackMessage;
+    };
+
     const handleSubmit = async () => {
         const errs = validate();
         if (Object.keys(errs).length) { setFormErrors(errs); return; }
@@ -112,11 +127,24 @@ export default function Navbar() {
                         user_id: user?.id ?? null,
                     }),
                 });
-                if (!response.ok) throw new Error('Issue submit failed');
+                if (!response.ok) {
+                    let apiMessage = '';
+                    try {
+                        const payload = await response.json();
+                        apiMessage = payload?.error || payload?.message || '';
+                    } catch {
+                        // ignore parse errors and keep fallback below
+                    }
+
+                    const submitError = new Error('Eroare la trimitere. Încearcă din nou.');
+                    submitError.status = response.status;
+                    submitError.apiMessage = apiMessage;
+                    throw submitError;
+                }
             }
             setStep(3);
-        } catch {
-            setFormErrors({ submit: 'Eroare la trimitere. Încearcă din nou.' });
+        } catch (error) {
+            setFormErrors({ submit: resolveSubmitError(error) });
         } finally { setSubmitting(false); }
     };
 

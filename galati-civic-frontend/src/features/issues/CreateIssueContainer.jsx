@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useAuth } from '../../context/AuthContext';
@@ -24,12 +23,7 @@ delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIcon2x, iconUrl: markerIcon, shadowUrl: markerShadow });
 
 const makeIcon = (color) => L.divIcon({ className: '', html: `<div style="width:26px;height:26px;border-radius:50% 50% 50% 0;background:${color};border:2.5px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.4);transform:rotate(-45deg);"></div>`, iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -30] });
-const NEW_ICON = makeIcon('#ef4444');
-const PROGRESS_ICON = makeIcon('#f59e0b');
-const DONE_ICON = makeIcon('#10b981');
-const REVIEW_ICON = makeIcon('#3b82f6');
 const SELECTED_ICON = makeIcon('#a855f7');
-const STATUS_ICONS = { Nou: NEW_ICON, 'În lucru': PROGRESS_ICON, Rezolvat: DONE_ICON, 'În verificare': REVIEW_ICON };
 const GALATI_CENTER = [45.4353, 28.008];
 
 const CATEGORIES = [
@@ -202,9 +196,9 @@ const CreateIssueContainer = () => {
             <IssueTabs tab={tab} myIssuesCount={myIssues.length} allIssuesCount={allIssues.length} onSelectMy={() => setTab('my')} onSelectNew={() => { setTab('new'); setStep(1); }} onSelectMap={() => setTab('map')} />
 
             <div className="ci-body">
-                {tab === 'my' && <div className="ci-my-section"><MyIssuesPanel isLoading={isLoading} myIssues={myIssues} onSelectIssue={setSelectedIssue} onStartNew={() => { setTab('new'); setStep(1); }} onVote={handleVote} votedIssues={votedIssues} onEdit={openEdit} onDelete={setDeleteConfirm} categories={CATEGORIES} priorities={PRIORITIES} StatusBadge={StatusBadge} /></div>}
-                {tab === 'new' && <NewIssueStepper step={step} form={form} formErrors={formErrors} setForm={setForm} setFormErrors={setFormErrors} onBack={prevStep} onNext={nextStep} onSubmit={handleSubmit} submitting={submitting} validate={validate} categories={CATEGORIES} priorities={PRIORITIES} mapCenter={GALATI_CENTER} selectedIcon={SELECTED_ICON} MapPicker={MapPicker} />}
-                {tab === 'map' && <IssuesMapPanel mapSearch={mapSearch} onMapSearchChange={setMapSearch} mapFilter={mapFilter} onMapFilterChange={setMapFilter} filteredForMap={filteredForMap} onSelectIssue={setSelectedIssue} selectedIssue={selectedIssue} categories={CATEGORIES} StatusBadge={StatusBadge} statusIcons={STATUS_ICONS} defaultIcon={NEW_ICON} mapCenter={GALATI_CENTER} MapPicker={MapPicker} />}
+                {tab === 'my' && <div className="ci-my-section"><MyIssuesPanel isLoading={isLoading} myIssues={myIssues} onSelectIssue={setSelectedIssue} onStartNew={() => { setTab('new'); setStep(1); }} onVote={handleVote} votedIssues={votedIssues} onEdit={openEdit} onDelete={setDeleteConfirm} categories={CATEGORIES} priorities={PRIORITIES} renderStatusBadge={(status) => <StatusBadge status={status} />} /></div>}
+                {tab === 'new' && <NewIssueStepper step={step} form={form} formErrors={formErrors} setForm={setForm} setFormErrors={setFormErrors} onBack={prevStep} onNext={nextStep} onSubmit={handleSubmit} submitting={submitting} validate={validate} categories={CATEGORIES} priorities={PRIORITIES} mapCenter={GALATI_CENTER} selectedIcon={SELECTED_ICON} />}
+                {tab === 'map' && <IssuesMapPanel mapSearch={mapSearch} onMapSearchChange={setMapSearch} mapFilter={mapFilter} onMapFilterChange={setMapFilter} filteredForMap={filteredForMap} onSelectIssue={setSelectedIssue} selectedIssueId={selectedIssue?.id} categories={CATEGORIES} renderStatusBadge={(status) => <StatusBadge status={status} />} mapCenter={GALATI_CENTER} />}
             </div>
 
             {selectedIssue && (
