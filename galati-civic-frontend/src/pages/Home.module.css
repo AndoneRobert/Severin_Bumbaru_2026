@@ -280,3 +280,130 @@
                     .urgent-banner-inner { flex-direction: column; gap: 8px; align-items: flex-start; }
                 }
             
+
+/* ---- Restored Home UI classes (missing in previous merge) ---- */
+.toast {
+  position: fixed;
+  top: 84px;
+  left: 50%;
+  transform: translate(-50%, -16px);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+  z-index: 800;
+}
+.toast-show { opacity: 1; transform: translate(-50%, 0); }
+.toast-icon { font-weight: 700; }
+
+.search-icon { opacity: 0.8; }
+.search-clear {
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.filter-btn,
+.view-btn,
+.vote-btn,
+.follow-btn,
+.flag-btn,
+.clear-filters {
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+.filter-btn.active,
+.view-btn.active {
+  background: linear-gradient(135deg, rgba(59,130,246,.3), rgba(37,99,235,.28));
+  border-color: rgba(96,165,250,.45);
+}
+.view-toggle { display: inline-flex; gap: 8px; }
+.results-count { color: var(--text-dim); }
+.clear-filters { margin-left: auto; }
+
+.quick-cats-title { margin-bottom: 12px; }
+.quick-cats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+.quick-cat-card {
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  cursor: pointer;
+}
+.quick-cat-card.active { border-color: rgba(96,165,250,.5); }
+.qcat-label { font-size: 12px; color: var(--text-dim); }
+.qcat-count { font-size: 12px; padding: 1px 7px; border-radius: 999px; background: rgba(59,130,246,.2); }
+
+.map-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-lg); overflow: hidden; }
+.map-card-hidden { display: none; }
+.map-hint { padding: 10px 12px; font-size: 12px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.map-hint-user { color: #93c5fd; }
+.map-hint-guest { color: #fcd34d; }
+.map-hint-guest a { color: #fde68a; }
+.map-input {
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px;
+  background: rgba(255,255,255,.03);
+  color: var(--text);
+  padding: 9px 10px;
+}
+.map-form { display: grid; gap: 8px; }
+.map-form-title { margin-bottom: 4px; }
+.map-form-btns { display: flex; gap: 8px; }
+
+.list-title { font-size: 1.8rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.count-pill { font-size: 12px; border-radius: 999px; background: rgba(96,165,250,.2); padding: 1px 8px; }
+.admin-chip { font-size: 11px; color: #fcd34d; }
+
+.issue-row-top { align-items: flex-start; }
+.issue-cat-icon { font-size: 18px; line-height: 1; margin-top: 2px; min-width: 24px; text-align: center; }
+.issue-row-content { flex: 1; min-width: 0; }
+.issue-row-title-line { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.issue-cat, .issue-date { font-size: 11px; color: var(--text-muted); }
+.priority-dot-wrap { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-dim); }
+.priority-dot { width: 7px; height: 7px; border-radius: 999px; }
+.status-badge { font-size: 11px; border-radius: 999px; padding: 2px 8px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); white-space: nowrap; }
+
+.issue-row-actions { margin-top: 4px; }
+.vote-btn.voted, .follow-btn.followed, .flag-btn.flagged { border-color: rgba(96,165,250,.5); background: rgba(59,130,246,.2); }
+.admin-select-inline {
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.faq-grid { display: grid; gap: 8px; }
+.faq-item {
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px;
+  background: rgba(255,255,255,.02);
+  padding: 10px 12px;
+}
+.faq-item summary { cursor: pointer; font-weight: 600; }
+.faq-item p { margin-top: 8px; color: var(--text-dim); }

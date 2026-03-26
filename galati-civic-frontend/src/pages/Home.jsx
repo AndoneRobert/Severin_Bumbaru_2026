@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
 import { useAuth } from '../context/AuthContext';
@@ -7,6 +6,11 @@ import { useIssues } from '../features/issues/hooks/useIssues';
 import { useIssueForm } from '../features/issues/hooks/useIssueForm';
 import { useToast } from '../features/issues/hooks/useToast';
 import L from 'leaflet';
+import styles from './Home.module.css';
+import { flagIssue, updateIssue, replyIssue } from '../services/issuesApi';
+import BaseMap from '../features/map/components/BaseMap';
+import IssueMarkersLayer from '../features/map/components/IssueMarkersLayer';
+import LocationPickerLayer from '../features/map/components/LocationPickerLayer';
 
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -15,15 +19,11 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIcon2x, iconUrl: markerIcon, shadowUrl: markerShadow });
 
-const makeIcon = (color) => L.divIcon({
-    className: '',
-    html: `<div style="width:26px;height:26px;border-radius:50% 50% 50% 0;background:${color};border:2.5px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.4);transform:rotate(-45deg);"></div>`,
-    iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -30],
-});
-const STATUS_ICONS = {
-    'Nou': makeIcon('#ef4444'), 'În lucru': makeIcon('#f59e0b'),
-    'Rezolvat': makeIcon('#10b981'), 'În verificare': makeIcon('#3b82f6'),
-};
+const m = (classNames) => classNames
+    .split(' ')
+    .filter(Boolean)
+    .map((name) => styles[name] || name)
+    .join(' ');
 
 const CATEGORIES = [
     { value: 'Infrastructură', icon: '🛣️' }, { value: 'Iluminat', icon: '💡' },
@@ -107,6 +107,7 @@ const Home = () => {
     const { user, getToken } = useAuth();
     const isAdmin = user?.role === 'admin' || user?.email === 'admin@galati.ro';
     const useMock = import.meta.env.VITE_USE_MOCK === 'true';
+    const apiUrl = (import.meta.env.VITE_API_URL || 'https://severin-bumbaru-2026.onrender.com/api').replace(/\/+$/, '');
 
     const { toast, showToast } = useToast({ duration: 3000 });
     const { form: formData, setForm: setFormData, resetForm } = useIssueForm({
