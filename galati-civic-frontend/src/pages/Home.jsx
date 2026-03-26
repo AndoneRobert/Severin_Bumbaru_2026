@@ -1,9 +1,16 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
 import { useAuth } from '../context/AuthContext';
+import { useIssues } from '../features/issues/hooks/useIssues';
+import { useIssueForm } from '../features/issues/hooks/useIssueForm';
+import { useToast } from '../features/issues/hooks/useToast';
 import L from 'leaflet';
+import styles from './Home.module.css';
+import { flagIssue, updateIssue, replyIssue } from '../services/issuesApi';
+import BaseMap from '../features/map/components/BaseMap';
+import IssueMarkersLayer from '../features/map/components/IssueMarkersLayer';
+import LocationPickerLayer from '../features/map/components/LocationPickerLayer';
 
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -12,15 +19,11 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIcon2x, iconUrl: markerIcon, shadowUrl: markerShadow });
 
-const makeIcon = (color) => L.divIcon({
-    className: '',
-    html: `<div style="width:26px;height:26px;border-radius:50% 50% 50% 0;background:${color};border:2.5px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.4);transform:rotate(-45deg);"></div>`,
-    iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -30],
-});
-const STATUS_ICONS = {
-    'Nou': makeIcon('#ef4444'), 'În lucru': makeIcon('#f59e0b'),
-    'Rezolvat': makeIcon('#10b981'), 'În verificare': makeIcon('#3b82f6'),
-};
+const m = (classNames) => classNames
+    .split(' ')
+    .filter(Boolean)
+    .map((name) => styles[name] || name)
+    .join(' ');
 
 const CATEGORIES = [
     { value: 'Infrastructură', icon: '🛣️' }, { value: 'Iluminat', icon: '💡' },
@@ -45,13 +48,13 @@ const MOCK_ISSUES = [
 
 // Sub-componente
 const StatCard = ({ value, label, icon, color, delay = 0, trend }) => (
-    <div className="stat-card" style={{ animationDelay: `${delay}ms` }}>
-        <div className="stat-icon-wrap" style={{ background: `${color}18`, border: `1px solid ${color}30` }}>
+    <div className={m('stat-card')} style={{ animationDelay: `${delay}ms` }}>
+        <div className={m('stat-icon-wrap')} style={{ background: `${color}18`, border: `1px solid ${color}30` }}>
             <span style={{ fontSize: '20px' }}>{icon}</span>
         </div>
-        <div className="stat-value" style={{ color }}>{value}</div>
-        <div className="stat-label">{label}</div>
-        {trend && <div className="stat-trend" style={{ color: trend > 0 ? '#10b981' : '#ef4444' }}>
+        <div className={m('stat-value')} style={{ color }}>{value}</div>
+        <div className={m('stat-label')}>{label}</div>
+        {trend && <div className={m('stat-trend')} style={{ color: trend > 0 ? '#10b981' : '#ef4444' }}>
             {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}% față de luna trecută
         </div>}
     </div>
@@ -65,87 +68,78 @@ const StatusBadge = ({ status }) => {
         'În verificare': { cls: 'badge-review', text: '🔵 Verificare' },
     };
     const b = map[status] || { cls: 'badge-new', text: status };
-    return <span className={`status-badge ${b.cls}`}>{b.text}</span>;
+    return <span className={m(`status-badge ${b.cls}`)}>{b.text}</span>;
 };
 
 const PriorityDot = ({ priority }) => {
     const colors = { 'Urgentă': '#ef4444', 'Ridicată': '#f97316', 'Medie': '#eab308', 'Scăzută': '#22c55e' };
     return (
-        <span className="priority-dot-wrap">
-            <span className="priority-dot" style={{ background: colors[priority] || '#94a3b8' }} />
+        <span className={m('priority-dot-wrap')}>
+            <span className={m('priority-dot')} style={{ background: colors[priority] || '#94a3b8' }} />
             {priority}
         </span>
     );
 };
 
 const Toast = ({ msg, show, type = 'info' }) => (
-    <div className={`toast toast-${type}${show ? ' toast-show' : ''}`}>
-        <span className="toast-icon">{type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span>
+    <div className={m(`toast toast-${type}${show ? ' toast-show' : ''}`)}>
+        <span className={m('toast-icon')}>{type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span>
         {msg}
     </div>
 );
 
 // ── Componenta principală ──
 const Home = () => {
-    const [issues, setIssues] = useState([]);
     const [filter, setFilter] = useState('Toate');
     const [catFilter, setCatFilter] = useState('Toate');
     const [search, setSearch] = useState('');
     const [newLocation, setNewLocation] = useState(null);
     const [selectedIssue, setSelectedIssue] = useState(null);
-    const [toast, setToast] = useState({ msg: '', show: false, type: 'info' });
     const [sortBy, setSortBy] = useState('date');
-    const [formData, setFormData] = useState({ title: '', description: '', category: 'Infrastructură', priority: 'Medie' });
     const [submitting, setSubmitting] = useState(false);
     const [adminReply, setAdminReply] = useState('');
     const [showReplyBox, setShowReplyBox] = useState(null);
-    const [votedIssues, setVotedIssues] = useState(new Set());
     const [followedIssues, setFollowedIssues] = useState(new Set());
     const [flaggedIssues, setFlaggedIssues] = useState(new Set());
     const [activeView, setActiveView] = useState('map');
-    const [isLoading, setIsLoading] = useState(true);
     const [urgentBannerClosed, setUrgentBannerClosed] = useState(false);
 
     const { user, getToken } = useAuth();
-    const apiUrl = (import.meta.env.VITE_API_URL || 'https://severin-bumbaru-2026.onrender.com/api').replace(/\/+$/, '');
     const isAdmin = user?.role === 'admin' || user?.email === 'admin@galati.ro';
     const useMock = import.meta.env.VITE_USE_MOCK === 'true';
+    const apiUrl = (import.meta.env.VITE_API_URL || 'https://severin-bumbaru-2026.onrender.com/api').replace(/\/+$/, '');
 
-    const showToast = useCallback((msg, type = 'info') => {
-        setToast({ msg, show: true, type });
-        setTimeout(() => setToast({ msg: '', show: false, type: 'info' }), 3000);
-    }, []);
+    const { toast, showToast } = useToast({ duration: 3000 });
+    const { form: formData, setForm: setFormData, resetForm } = useIssueForm({
+        initialForm: { title: '', description: '', category: 'Infrastructură', priority: 'Medie', lat: null, lng: null },
+    });
+    const {
+        issues,
+        setIssues,
+        isLoading,
+        votedIssues,
+        loadIssues,
+        createIssue,
+        voteIssue,
+    } = useIssues({
+        apiClient: axios,
+        user,
+        getToken,
+        apiUrl,
+        useMock,
+        mockIssues: MOCK_ISSUES,
+    });
 
-    const fetchIssues = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            if (useMock) {
-                await new Promise(r => setTimeout(r, 600));
-                setIssues(MOCK_ISSUES);
-            } else {
-                const res = await axios.get(`${apiUrl}/issues`);
-                setIssues(res.data);
-            }
-        } catch { setIssues(MOCK_ISSUES); }
-        finally { setIsLoading(false); }
-    }, [apiUrl, useMock]);
-
-    useEffect(() => { fetchIssues(); }, [fetchIssues]);
+    useEffect(() => {
+        loadIssues().catch(() => setIssues(MOCK_ISSUES));
+    }, [loadIssues, setIssues]);
 
     const handleVote = async (id, e) => {
         e?.stopPropagation();
         if (!user) { showToast('Trebuie să fii logat pentru a vota!', 'error'); return; }
         if (votedIssues.has(id)) { showToast('Ai votat deja această sesizare.', 'error'); return; }
-        if (useMock) {
-            setIssues(prev => prev.map(i => i.id === id ? { ...i, votes: (i.votes || 0) + 1 } : i));
-            setVotedIssues(prev => new Set([...prev, id]));
-            showToast('Vot înregistrat! ✓', 'success');
-            return;
-        }
         try {
-            await axios.post(`${apiUrl}/issues/${id}/vote`, {}, { headers: { Authorization: `Bearer ${user.token}` } });
-            setVotedIssues(prev => new Set([...prev, id]));
-            fetchIssues();
+            await voteIssue(id);
             showToast('Vot înregistrat! ✓', 'success');
         } catch { showToast('Ai votat deja.', 'error'); }
     };
@@ -172,7 +166,7 @@ const Home = () => {
             return;
         }
         try {
-            await axios.post(`${apiUrl}/issues/${id}/flag`, {}, { headers: { Authorization: `Bearer ${user.token}` } });
+            await flagIssue(id, user.token);
             setFlaggedIssues(prev => new Set([...prev, id]));
             showToast('Sesizare raportată. Mulțumim!', 'success');
         } catch { showToast('Ai raportat deja.', 'error'); }
@@ -187,9 +181,9 @@ const Home = () => {
             return;
         }
         try {
-            await axios.put(`${apiUrl}/issues/${id}`, { status: newStatus }, { headers: { Authorization: `Bearer ${user.token}` } });
+            await updateIssue(id, { status: newStatus }, user.token);
             showToast(`Status → ${newStatus}`, 'success');
-            fetchIssues();
+            await loadIssues();
         } catch { showToast('Eroare la actualizare.', 'error'); }
     };
 
@@ -202,9 +196,9 @@ const Home = () => {
             setShowReplyBox(null); setAdminReply(''); return;
         }
         try {
-            await axios.post(`${apiUrl}/issues/${id}/reply`, { message: adminReply }, { headers: { Authorization: `Bearer ${user.token}` } });
+            await replyIssue(id, adminReply, user.token);
             showToast('Răspuns trimis!', 'success');
-            setShowReplyBox(null); setAdminReply(''); fetchIssues();
+            setShowReplyBox(null); setAdminReply(''); await loadIssues();
         } catch { showToast('Eroare la trimitere.', 'error'); }
     };
 
@@ -216,21 +210,12 @@ const Home = () => {
         }
         setSubmitting(true);
         try {
-            const newIssue = { id: Date.now(), ...formData, lat: newLocation.lat, lng: newLocation.lng, votes: 0, status: 'Nou', created_at: new Date().toISOString(), admin_reply: null };
-            if (useMock) {
-                await new Promise(r => setTimeout(r, 700));
-                setIssues(prev => [newIssue, ...prev]);
-            } else {
-                const token = (await getToken?.()) || user?.token;
-                await axios.post(
-                    `${apiUrl}/issues`,
-                    { ...newIssue, user_id: user?.id ?? null },
-                    token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
-                );
-                fetchIssues();
+            await createIssue({ ...formData, lat: newLocation.lat, lng: newLocation.lng, admin_reply: null });
+            if (!useMock) {
+                await loadIssues();
             }
             setNewLocation(null);
-            setFormData({ title: '', description: '', category: 'Infrastructură', priority: 'Medie' });
+            resetForm({ title: '', description: '', category: 'Infrastructură', priority: 'Medie', lat: null, lng: null });
             showToast('Sesizare trimisă! ✓', 'success');
         } catch { showToast('Eroare la trimitere.', 'error'); }
         finally { setSubmitting(false); }
@@ -255,11 +240,6 @@ const Home = () => {
     const resolvedCount = issues.filter(i => i.status === 'Rezolvat').length;
     const resolveRate = issues.length ? Math.round((resolvedCount / issues.length) * 100) : 0;
 
-    const MapInteraction = () => {
-        useMapEvents({ click(e) { if (!user) { showToast('Trebuie să fii logat!', 'error'); return; } setNewLocation(e.latlng); } });
-        return null;
-    };
-
     const DetailModal = ({ issue }) => {
         if (!issue) return null;
         const lat = issue.lat || issue.latitude;
@@ -268,71 +248,71 @@ const Home = () => {
         const isFollowed = followedIssues.has(issue.id);
         const isFlagged = flaggedIssues.has(issue.id);
         return (
-            <div className="modal-overlay" onClick={() => setSelectedIssue(null)}>
-                <div className="modal-box" onClick={e => e.stopPropagation()}>
-                    <div className="modal-header">
-                        <div className="modal-header-left">
-                            <div className="modal-category-icon">{CATEGORIES.find(c => c.value === issue.category)?.icon || '📋'}</div>
+            <div className={m('modal-overlay')} onClick={() => setSelectedIssue(null)}>
+                <div className={m('modal-box')} onClick={e => e.stopPropagation()}>
+                    <div className={m('modal-header')}>
+                        <div className={m('modal-header-left')}>
+                            <div className={m('modal-category-icon')}>{CATEGORIES.find(c => c.value === issue.category)?.icon || '📋'}</div>
                             <div>
-                                <div className="modal-title">{issue.title}</div>
-                                <div className="modal-sub">{issue.category} · #{issue.id}</div>
+                                <div className={m('modal-title')}>{issue.title}</div>
+                                <div className={m('modal-sub')}>{issue.category} · #{issue.id}</div>
                             </div>
                         </div>
-                        <button className="modal-close" onClick={() => setSelectedIssue(null)}>✕</button>
+                        <button className={m('modal-close')} onClick={() => setSelectedIssue(null)}>✕</button>
                     </div>
-                    <div className="modal-body">
-                        <div className="modal-badges">
+                    <div className={m('modal-body')}>
+                        <div className={m('modal-badges')}>
                             <StatusBadge status={issue.status} />
                             {issue.priority && <PriorityDot priority={issue.priority} />}
                         </div>
-                        <p className="modal-desc">{issue.description}</p>
+                        <p className={m('modal-desc')}>{issue.description}</p>
                         {lat && lng && (
-                            <div className="modal-location">
+                            <div className={m('modal-location')}>
                                 📍 {parseFloat(lat).toFixed(5)}, {parseFloat(lng).toFixed(5)}
-                                <a href={`https://www.google.com/maps?q=${lat},${lng}`} target="_blank" rel="noreferrer" className="maps-link">Deschide în Maps →</a>
+                                <a href={`https://www.google.com/maps?q=${lat},${lng}`} target="_blank" rel="noreferrer" className={m('maps-link')}>Deschide în Maps →</a>
                             </div>
                         )}
                         {issue.admin_reply && (
-                            <div className="admin-reply-box">
-                                <div className="reply-label">🏛️ Răspuns oficial Primăria Galați</div>
+                            <div className={m('admin-reply-box')}>
+                                <div className={m('reply-label')}>🏛️ Răspuns oficial Primăria Galați</div>
                                 <p>{issue.admin_reply}</p>
                             </div>
                         )}
-                        <div className="timeline">
-                            <div className="tl-item"><div className="tl-dot dot-blue" /><div><div className="tl-text">Sesizare înregistrată</div><div className="tl-time">{issue.created_at ? new Date(issue.created_at).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}</div></div></div>
-                            {(issue.status === 'În lucru' || issue.status === 'În verificare' || issue.status === 'Rezolvat') && (<div className="tl-item"><div className="tl-dot dot-amber" /><div><div className="tl-text">Preluată de departament</div><div className="tl-time">În curs de procesare</div></div></div>)}
-                            {issue.status === 'În verificare' && (<div className="tl-item"><div className="tl-dot dot-blue" /><div><div className="tl-text">În verificare finală</div><div className="tl-time">Verificare calitate</div></div></div>)}
-                            {issue.status === 'Rezolvat' && (<div className="tl-item"><div className="tl-dot dot-green" /><div><div className="tl-text">Problemă rezolvată ✓</div><div className="tl-time">Lucrare finalizată</div></div></div>)}
+                        <div className={m('timeline')}>
+                            <div className={m('tl-item')}><div className={m('tl-dot dot-blue')} /><div><div className={m('tl-text')}>Sesizare înregistrată</div><div className={m('tl-time')}>{issue.created_at ? new Date(issue.created_at).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}</div></div></div>
+                            {(issue.status === 'În lucru' || issue.status === 'În verificare' || issue.status === 'Rezolvat') && (<div className={m('tl-item')}><div className={m('tl-dot dot-amber')} /><div><div className={m('tl-text')}>Preluată de departament</div><div className={m('tl-time')}>În curs de procesare</div></div></div>)}
+                            {issue.status === 'În verificare' && (<div className={m('tl-item')}><div className={m('tl-dot dot-blue')} /><div><div className={m('tl-text')}>În verificare finală</div><div className={m('tl-time')}>Verificare calitate</div></div></div>)}
+                            {issue.status === 'Rezolvat' && (<div className={m('tl-item')}><div className={m('tl-dot dot-green')} /><div><div className={m('tl-text')}>Problemă rezolvată ✓</div><div className={m('tl-time')}>Lucrare finalizată</div></div></div>)}
                         </div>
-                        <div className="modal-actions">
-                            <button className={`btn-action ${isVoted ? 'btn-action-active-blue' : ''}`} onClick={() => handleVote(issue.id)}>▲ Susțin <span className="action-count">({issue.votes || 0})</span></button>
-                            <button className={`btn-action ${isFollowed ? 'btn-action-active-green' : ''}`} onClick={() => handleFollow(issue.id)}>👁 {isFollowed ? 'Urmăresc' : 'Urmăresc'}</button>
-                            <button className={`btn-action ${isFlagged ? 'btn-action-active-red' : 'btn-action-danger'}`} onClick={() => handleFlag(issue.id)} disabled={isFlagged}>🚩 {isFlagged ? 'Raportat' : 'Raportez'}</button>
+                        <div className={m('modal-actions')}>
+                            <button className={m(`btn-action ${isVoted ? 'btn-action-active-blue' : ''}`)} onClick={() => handleVote(issue.id)}>▲ Susțin <span className={m('action-count')}>({issue.votes || 0})</span></button>
+                            <button className={m(`btn-action ${isFollowed ? 'btn-action-active-green' : ''}`)} onClick={() => handleFollow(issue.id)}>👁 {isFollowed ? 'Urmăresc' : 'Urmăresc'}</button>
+                            <button className={m(`btn-action ${isFlagged ? 'btn-action-active-red' : 'btn-action-danger'}`)} onClick={() => handleFlag(issue.id)} disabled={isFlagged}>🚩 {isFlagged ? 'Raportat' : 'Raportez'}</button>
                         </div>
                         {isAdmin && (
-                            <div className="admin-actions-modal">
-                                <div className="admin-label">⚙️ Panou Administrator</div>
-                                <div className="admin-row">
-                                    <div className="admin-field">
-                                        <label className="admin-field-label">Status</label>
-                                        <select value={issue.status} onChange={e => updateStatus(issue.id, e.target.value)} className="admin-select">
+                            <div className={m('admin-actions-modal')}>
+                                <div className={m('admin-label')}>⚙️ Panou Administrator</div>
+                                <div className={m('admin-row')}>
+                                    <div className={m('admin-field')}>
+                                        <label className={m('admin-field-label')}>Status</label>
+                                        <select value={issue.status} onChange={e => updateStatus(issue.id, e.target.value)} className={m('admin-select')}>
                                             <option>Nou</option><option>În lucru</option><option>În verificare</option><option>Rezolvat</option>
                                         </select>
                                     </div>
-                                    <div className="admin-field">
-                                        <label className="admin-field-label">Redirecționează</label>
-                                        <select className="admin-select"><option>Selectează departament...</option><option>Serviciu Infrastructură</option><option>Serviciu Rețele Electrice</option><option>APPA Galați</option><option>Domeniu Public</option><option>Serviciu Salubritate</option></select>
+                                    <div className={m('admin-field')}>
+                                        <label className={m('admin-field-label')}>Redirecționează</label>
+                                        <select className={m('admin-select')}><option>Selectează departament...</option><option>Serviciu Infrastructură</option><option>Serviciu Rețele Electrice</option><option>APPA Galați</option><option>Domeniu Public</option><option>Serviciu Salubritate</option></select>
                                     </div>
                                 </div>
-                                <button className="btn-reply-toggle" onClick={() => setShowReplyBox(showReplyBox === issue.id ? null : issue.id)}>
+                                <button className={m('btn-reply-toggle')} onClick={() => setShowReplyBox(showReplyBox === issue.id ? null : issue.id)}>
                                     {showReplyBox === issue.id ? '✕ Anulează' : '💬 Trimite răspuns oficial'}
                                 </button>
                                 {showReplyBox === issue.id && (
-                                    <div className="reply-form">
-                                        <textarea className="reply-textarea" placeholder="Scrie răspunsul oficial..." value={adminReply} onChange={e => setAdminReply(e.target.value)} rows={4} />
-                                        <div className="reply-form-btns">
-                                            <button className="btn-primary-sm" onClick={() => sendAdminReply(issue.id)}>📤 Publică</button>
-                                            <button className="btn-cancel-sm" onClick={() => { setShowReplyBox(null); setAdminReply(''); }}>Anulează</button>
+                                    <div className={m('reply-form')}>
+                                        <textarea className={m('reply-textarea')} placeholder="Scrie răspunsul oficial..." value={adminReply} onChange={e => setAdminReply(e.target.value)} rows={4} />
+                                        <div className={m('reply-form-btns')}>
+                                            <button className={m('btn-primary-sm')} onClick={() => sendAdminReply(issue.id)}>📤 Publică</button>
+                                            <button className={m('btn-cancel-sm')} onClick={() => { setShowReplyBox(null); setAdminReply(''); }}>Anulează</button>
                                         </div>
                                     </div>
                                 )}
@@ -345,79 +325,79 @@ const Home = () => {
     };
 
     const SkeletonRow = () => (
-        <div className="skeleton-row">
-            <div className="skeleton skeleton-title" />
-            <div className="skeleton skeleton-text" />
-            <div className="skeleton skeleton-text short" />
+        <div className={m('skeleton-row')}>
+            <div className={m('skeleton skeleton-title')} />
+            <div className={m('skeleton skeleton-text')} />
+            <div className={m('skeleton skeleton-text short')} />
         </div>
     );
 
     return (
-        <div className="home-page">
+        <div className={m('home-page')}>
             <Toast msg={toast.msg} show={toast.show} type={toast.type} />
             {selectedIssue && <DetailModal issue={selectedIssue} />}
 
             {/* ── BANNER URGENTE ── */}
             {urgentIssues.length > 0 && !urgentBannerClosed && (
-                <div className="urgent-banner">
-                    <div className="urgent-banner-inner">
-                        <div className="urgent-banner-left">
-                            <span className="urgent-pulse-dot" />
-                            <span className="urgent-label">URGENT</span>
-                            <span className="urgent-text">
+                <div className={m('urgent-banner')}>
+                    <div className={m('urgent-banner-inner')}>
+                        <div className={m('urgent-banner-left')}>
+                            <span className={m('urgent-pulse-dot')} />
+                            <span className={m('urgent-label')}>URGENT</span>
+                            <span className={m('urgent-text')}>
                                 {urgentIssues.length} sesizare{urgentIssues.length > 1 ? 'i' : ''} urgentă{urgentIssues.length > 1 ? '' : ''} în așteptare:
                             </span>
-                            <span className="urgent-title" onClick={() => setSelectedIssue(urgentIssues[0])} style={{ cursor: 'pointer' }}>
+                            <span className={m('urgent-title')} onClick={() => setSelectedIssue(urgentIssues[0])} style={{ cursor: 'pointer' }}>
                                 {urgentIssues[0]?.title}
                             </span>
                         </div>
-                        <button className="urgent-close" onClick={() => setUrgentBannerClosed(true)}>✕</button>
+                        <button className={m('urgent-close')} onClick={() => setUrgentBannerClosed(true)}>✕</button>
                     </div>
                 </div>
             )}
 
             {/* ── HERO ── */}
-            <section className="hero-section">
-                <div className="hero-bg-grid" />
-                <div className="hero-bg-glow" />
-                <div className="hero-inner">
-                    <div className="hero-eyebrow">
-                        <span className="eyebrow-dot" />
+            <section className={m('hero-section')}>
+                <div className={m('hero-bg-grid')} />
+                <div className={m('hero-bg-glow')} />
+                <div className={m('hero-inner')}>
+                    <div className={m('hero-eyebrow')}>
+                        <span className={m('eyebrow-dot')} />
                         Municipiul Galați · Platformă Civică Digitală
                     </div>
-                    <h1 className="gradient-text">Galațiul tău,<br />vocea ta.</h1>
-                    <p className="hero-sub">
+                    <h1 className={m('gradient-text')}>Galațiul tău,<br />vocea ta.</h1>
+                    <p className={m('hero-sub')}>
                         Raportează probleme urbane direct pe hartă, susține sesizările
                         vecinilor și urmărește rezolvarea lor în timp real.
                     </p>
-                    <div className="hero-cta">
-                        <a href="#map-section" className="btn-primary" style={{ textDecoration: 'none' }}>📍 Deschide Harta</a>
+                    <div className={m('hero-cta')}>
+                        <a href="#map-section" className={m('btn-primary')} style={{ textDecoration: 'none' }}>📍 Deschide Harta</a>
                         {!user ? (
-                            <a href="/login" className="btn-secondary" style={{ textDecoration: 'none' }}>Creează cont gratuit →</a>
+                            <a href="/login" className={m('btn-secondary')} style={{ textDecoration: 'none' }}>Creează cont gratuit →</a>
                         ) : (
-                            <a href="#map-section" className="btn-secondary" style={{ textDecoration: 'none' }}>✏️ Raportează o problemă</a>
+                            <a href="#map-section" className={m('btn-secondary')} style={{ textDecoration: 'none' }}>✏️ Raportează o problemă</a>
                         )}
                     </div>
-                    <div className="hero-badges">
-                        <span className="hero-badge">🔒 Date securizate</span>
-                        <span className="hero-badge">🏛️ Integrat cu Primăria</span>
-                        <span className="hero-badge">📱 Responsive</span>
-                        <span className="hero-badge">⚡ Timp real</span>
+                    <div className={m('hero-badges')}>
+                        <span className={m('hero-badge')}>🔒 Date securizate</span>
+                        <span className={m('hero-badge')}>🏛️ Integrat cu Primăria</span>
+                        <span className={m('hero-badge')}>📱 Responsive</span>
+                        <span className={m('hero-badge')}>⚡ Timp real</span>
                     </div>
                 </div>
                 {/* Mini stats animate în hero */}
-                <div className="hero-mini-stats">
-                    <div className="hero-mini-stat">
+                <div className={m('hero-mini-stats')}>
+                    <div className={m('hero-mini-stat')}>
                         <span>{isLoading ? '—' : issues.length}</span>
                         <span>Sesizări</span>
                     </div>
-                    <div className="hero-mini-divider" />
-                    <div className="hero-mini-stat">
+                    <div className={m('hero-mini-divider')} />
+                    <div className={m('hero-mini-stat')}>
                         <span>{isLoading ? '—' : resolveRate}%</span>
                         <span>Rată rezolvare</span>
                     </div>
-                    <div className="hero-mini-divider" />
-                    <div className="hero-mini-stat">
+                    <div className={m('hero-mini-divider')} />
+                    <div className={m('hero-mini-stat')}>
                         <span>{isLoading ? '—' : issues.reduce((s, i) => s + (i.votes || 0), 0)}</span>
                         <span>Voturi cetățeni</span>
                     </div>
@@ -425,7 +405,7 @@ const Home = () => {
             </section>
 
             {/* ── STATS ── */}
-            <section className="stats-section">
+            <section className={m('stats-section')}>
                 <StatCard value={isLoading ? '...' : issues.length} label="Sesizări totale" icon="📋" color="#3b82f6" delay={0} trend={12} />
                 <StatCard value={isLoading ? '...' : resolvedCount} label="Rezolvate" icon="✅" color="#10b981" delay={80} trend={8} />
                 <StatCard value={isLoading ? '...' : issues.filter(i => i.status === 'În lucru').length} label="În lucru" icon="⚙️" color="#f59e0b" delay={160} />
@@ -434,20 +414,20 @@ const Home = () => {
             </section>
 
             {/* ── CATEGORII RAPIDE ── */}
-            <section className="quick-cats-section">
-                <h3 className="quick-cats-title">Filtrează după categorie</h3>
-                <div className="quick-cats-grid">
+            <section className={m('quick-cats-section')}>
+                <h3 className={m('quick-cats-title')}>Filtrează după categorie</h3>
+                <div className={m('quick-cats-grid')}>
                     {CATEGORIES.map(cat => {
                         const count = issues.filter(i => i.category === cat.value).length;
                         return (
                             <button
                                 key={cat.value}
-                                className={`quick-cat-card ${catFilter === cat.value ? 'active' : ''}`}
+                                className={m(`quick-cat-card ${catFilter === cat.value ? 'active' : ''}`)}
                                 onClick={() => { setCatFilter(catFilter === cat.value ? 'Toate' : cat.value); document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth' }); }}
                             >
-                                <span className="qcat-icon">{cat.icon}</span>
-                                <span className="qcat-label">{cat.value}</span>
-                                <span className="qcat-count">{count}</span>
+                                <span className={m('qcat-icon')}>{cat.icon}</span>
+                                <span className={m('qcat-label')}>{cat.value}</span>
+                                <span className={m('qcat-count')}>{count}</span>
                             </button>
                         );
                     })}
@@ -455,67 +435,67 @@ const Home = () => {
             </section>
 
             {/* ── PROGRES REZOLVARE ── */}
-            <section className="progress-section">
-                <div className="progress-card">
-                    <div className="progress-header">
+            <section className={m('progress-section')}>
+                <div className={m('progress-card')}>
+                    <div className={m('progress-header')}>
                         <div>
                             <h3>Progres lunar de rezolvare</h3>
                             <p>Rata de rezolvare a sesizărilor în Galați</p>
                         </div>
-                        <div className="progress-pct" style={{ color: resolveRate > 50 ? '#10b981' : '#f59e0b' }}>
+                        <div className={m('progress-pct')} style={{ color: resolveRate > 50 ? '#10b981' : '#f59e0b' }}>
                             {resolveRate}%
                         </div>
                     </div>
-                    <div className="progress-bar-wrap">
-                        <div className="progress-bar-track">
+                    <div className={m('progress-bar-wrap')}>
+                        <div className={m('progress-bar-track')}>
                             <div
-                                className="progress-bar-fill"
+                                className={m('progress-bar-fill')}
                                 style={{ width: `${resolveRate}%`, background: resolveRate > 50 ? 'linear-gradient(90deg, #059669, #10b981)' : 'linear-gradient(90deg, #b45309, #f59e0b)' }}
                             />
                         </div>
                     </div>
-                    <div className="progress-labels">
+                    <div className={m('progress-labels')}>
                         <span>{resolvedCount} rezolvate</span>
                         <span>{issues.length - resolvedCount} în progres</span>
                     </div>
                     {/* Breakdown pe statusuri */}
-                    <div className="progress-breakdown">
+                    <div className={m('progress-breakdown')}>
                         {[
                             { label: 'Nou', color: '#ef4444', count: issues.filter(i => i.status === 'Nou').length },
                             { label: 'În lucru', color: '#f59e0b', count: issues.filter(i => i.status === 'În lucru').length },
                             { label: 'Verificare', color: '#3b82f6', count: issues.filter(i => i.status === 'În verificare').length },
                             { label: 'Rezolvat', color: '#10b981', count: resolvedCount },
                         ].map(s => (
-                            <div key={s.label} className="pb-item">
-                                <div className="pb-bar" style={{ background: s.color, height: issues.length ? `${(s.count / issues.length) * 60}px` : '4px', minHeight: '4px' }} />
-                                <span className="pb-count" style={{ color: s.color }}>{s.count}</span>
-                                <span className="pb-label">{s.label}</span>
+                            <div key={s.label} className={m('pb-item')}>
+                                <div className={m('pb-bar')} style={{ background: s.color, height: issues.length ? `${(s.count / issues.length) * 60}px` : '4px', minHeight: '4px' }} />
+                                <span className={m('pb-count')} style={{ color: s.color }}>{s.count}</span>
+                                <span className={m('pb-label')}>{s.label}</span>
                             </div>
                         ))}
                     </div>
                 </div>
 
                 {/* Top votate */}
-                <div className="top-voted-card">
-                    <div className="tv-header">
+                <div className={m('top-voted-card')}>
+                    <div className={m('tv-header')}>
                         <h3>🏆 Top sesizări votate</h3>
                         <span>Cele mai susținute de comunitate</span>
                     </div>
-                    <div className="tv-list">
+                    <div className={m('tv-list')}>
                         {topVoted.map((issue, i) => (
-                            <div key={issue.id} className="tv-item" onClick={() => setSelectedIssue(issue)}>
-                                <div className="tv-rank" style={{ color: i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : '#cd7c2f' }}>
+                            <div key={issue.id} className={m('tv-item')} onClick={() => setSelectedIssue(issue)}>
+                                <div className={m('tv-rank')} style={{ color: i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : '#cd7c2f' }}>
                                     #{i + 1}
                                 </div>
-                                <div className="tv-content">
-                                    <div className="tv-title">{issue.title}</div>
-                                    <div className="tv-meta">
+                                <div className={m('tv-content')}>
+                                    <div className={m('tv-title')}>{issue.title}</div>
+                                    <div className={m('tv-meta')}>
                                         <span>{issue.category}</span>
                                         <StatusBadge status={issue.status} />
                                     </div>
                                 </div>
-                                <div className="tv-votes">
-                                    <span className="tv-vote-num">▲ {issue.votes || 0}</span>
+                                <div className={m('tv-votes')}>
+                                    <span className={m('tv-vote-num')}>▲ {issue.votes || 0}</span>
                                 </div>
                             </div>
                         ))}
@@ -524,23 +504,23 @@ const Home = () => {
             </section>
 
             {/* ── FILTRE & CĂUTARE ── */}
-            <div className="filter-area" id="map-section">
-                <div className="filter-bar">
-                    <div className="search-wrap">
-                        <span className="search-icon">🔍</span>
-                        <input className="search-input" type="text" placeholder="Caută sesizări după titlu sau descriere..." value={search} onChange={e => setSearch(e.target.value)} />
-                        {search && <button className="search-clear" onClick={() => setSearch('')}>✕</button>}
+            <div className={m('filter-area')} id="map-section">
+                <div className={m('filter-bar')}>
+                    <div className={m('search-wrap')}>
+                        <span className={m('search-icon')}>🔍</span>
+                        <input className={m('search-input')} type="text" placeholder="Caută sesizări după titlu sau descriere..." value={search} onChange={e => setSearch(e.target.value)} />
+                        {search && <button className={m('search-clear')} onClick={() => setSearch('')}>✕</button>}
                     </div>
-                    <div className="filter-controls">
-                        <div className="filter-group">
-                            <span className="filter-label">Status:</span>
+                    <div className={m('filter-controls')}>
+                        <div className={m('filter-group')}>
+                            <span className={m('filter-label')}>Status:</span>
                             {['Toate', 'Nou', 'În lucru', 'Rezolvat'].map(s => (
-                                <button key={s} className={`filter-btn ${filter === s ? 'active' : ''}`} onClick={() => setFilter(s)}>{s}</button>
+                                <button key={s} className={m(`filter-btn ${filter === s ? 'active' : ''}`)} onClick={() => setFilter(s)}>{s}</button>
                             ))}
                         </div>
-                        <div className="filter-group filter-right">
-                            <span className="filter-label">Sortare:</span>
-                            <select className="sort-select" value={sortBy} onChange={e => setSortBy(e.target.value)}>
+                        <div className={m('filter-group filter-right')}>
+                            <span className={m('filter-label')}>Sortare:</span>
+                            <select className={m('sort-select')} value={sortBy} onChange={e => setSortBy(e.target.value)}>
                                 <option value="date">🕐 Cele mai recente</option>
                                 <option value="votes">▲ Cele mai votate</option>
                                 <option value="priority">🔥 Prioritate</option>
@@ -548,114 +528,113 @@ const Home = () => {
                         </div>
                     </div>
                 </div>
-                <div className="filter-results-bar">
-                    <span className="results-count">{filteredIssues.length} sesizări găsite</span>
+                <div className={m('filter-results-bar')}>
+                    <span className={m('results-count')}>{filteredIssues.length} sesizări găsite</span>
                     {(filter !== 'Toate' || catFilter !== 'Toate' || search) && (
-                        <button className="clear-filters" onClick={() => { setFilter('Toate'); setCatFilter('Toate'); setSearch(''); }}>✕ Resetează filtrele</button>
+                        <button className={m('clear-filters')} onClick={() => { setFilter('Toate'); setCatFilter('Toate'); setSearch(''); }}>✕ Resetează filtrele</button>
                     )}
-                    <div className="view-toggle">
-                        <button className={`view-btn ${activeView === 'map' ? 'active' : ''}`} onClick={() => setActiveView('map')}>🗺 Hartă</button>
-                        <button className={`view-btn ${activeView === 'list' ? 'active' : ''}`} onClick={() => setActiveView('list')}>📋 Listă</button>
+                    <div className={m('view-toggle')}>
+                        <button className={m(`view-btn ${activeView === 'map' ? 'active' : ''}`)} onClick={() => setActiveView('map')}>🗺 Hartă</button>
+                        <button className={m(`view-btn ${activeView === 'list' ? 'active' : ''}`)} onClick={() => setActiveView('list')}>📋 Listă</button>
                     </div>
                 </div>
             </div>
 
             {/* ── HARTĂ + LISTĂ ── */}
-            <section className="map-list-section">
-                <div className={`map-card ${activeView === 'list' ? 'map-card-hidden' : ''}`}>
+            <section className={m('map-list-section')}>
+                <div className={m(`map-card ${activeView === 'list' ? 'map-card-hidden' : ''}`)}>
                     {user ? (
-                        <div className="map-hint map-hint-user">📍 Click pe hartă pentru a adăuga o sesizare</div>
+                        <div className={m('map-hint map-hint-user')}>📍 Click pe hartă pentru a adăuga o sesizare</div>
                     ) : (
-                        <div className="map-hint map-hint-guest">🔒 <a href="/login">Loghează-te</a> pentru a adăuga sesizări</div>
+                        <div className={m('map-hint map-hint-guest')}>🔒 <a href="/login">Loghează-te</a> pentru a adăuga sesizări</div>
                     )}
-                    <MapContainer center={GALATI_CENTER} zoom={13} style={{ height: '600px', width: '100%' }}>
-                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
-                        <MapInteraction />
-                        {newLocation && (
-                            <Marker position={newLocation}>
-                                <Popup maxWidth={300} closeOnClick={false}>
-                                    <form onSubmit={handleAddIssue} className="map-form">
-                                        <h4 className="map-form-title">🚨 Raportează problema</h4>
-                                        <input type="text" placeholder="Titlu sesizare *" required className="map-input" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} maxLength={100} />
-                                        <textarea placeholder="Descriere *" required className="map-input" rows={3} value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} maxLength={500} />
-                                        <select className="map-input" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
-                                            {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.icon} {c.value}</option>)}
-                                        </select>
-                                        <select className="map-input" value={formData.priority} onChange={e => setFormData({ ...formData, priority: e.target.value })}>
-                                            {PRIORITY_LEVELS.map(p => <option key={p} value={p}>{p}</option>)}
-                                        </select>
-                                        <div className="map-form-btns">
-                                            <button type="submit" className="btn-map-submit" disabled={submitting}>{submitting ? '⏳ Se trimite...' : '📤 Trimite'}</button>
-                                            <button type="button" className="btn-map-cancel" onClick={() => setNewLocation(null)}>Anulează</button>
-                                        </div>
-                                    </form>
-                                </Popup>
-                            </Marker>
-                        )}
-                        {filteredIssues.map(issue => {
-                            const lat = issue.lat || issue.latitude;
-                            const lng = issue.lng || issue.longitude;
-                            if (!lat || !lng) return null;
-                            return (
-                                <Marker key={issue.id} position={[lat, lng]} icon={STATUS_ICONS[issue.status] || STATUS_ICONS['Nou']} eventHandlers={{ click: () => setSelectedIssue(issue) }}>
-                                    <Popup maxWidth={240}>
-                                        <div className="map-popup">
-                                            <strong>{issue.title}</strong>
-                                            <div className="popup-meta"><StatusBadge status={issue.status} /><PriorityDot priority={issue.priority} /></div>
-                                            <p>{issue.description?.substring(0, 100)}{issue.description?.length > 100 ? '...' : ''}</p>
-                                            <div className="popup-footer">
-                                                <span className="popup-votes">▲ {issue.votes || 0} voturi</span>
-                                                <button onClick={() => setSelectedIssue(issue)} className="popup-detail-btn">Detalii →</button>
-                                            </div>
-                                        </div>
-                                    </Popup>
-                                </Marker>
-                            );
-                        })}
-                    </MapContainer>
-                    <div className="map-legend">
-                        <span className="legend-item"><span className="legend-dot" style={{ background: '#ef4444' }} />Nou</span>
-                        <span className="legend-item"><span className="legend-dot" style={{ background: '#f59e0b' }} />În lucru</span>
-                        <span className="legend-item"><span className="legend-dot" style={{ background: '#3b82f6' }} />Verificare</span>
-                        <span className="legend-item"><span className="legend-dot" style={{ background: '#10b981' }} />Rezolvat</span>
+                    <BaseMap center={GALATI_CENTER} zoom={13} style={{ height: '600px', width: '100%' }}>
+                        <LocationPickerLayer
+                            enabled={Boolean(user)}
+                            location={newLocation}
+                            onPickLocation={(latlng) => {
+                                if (!user) { showToast('Trebuie să fii logat!', 'error'); return; }
+                                setNewLocation(latlng);
+                            }}
+                            renderPopup={() => (
+                                <form onSubmit={handleAddIssue} className={m('map-form')}>
+                                    <h4 className={m('map-form-title')}>🚨 Raportează problema</h4>
+                                    <input type="text" placeholder="Titlu sesizare *" required className={m('map-input')} value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} maxLength={100} />
+                                    <textarea placeholder="Descriere *" required className={m('map-input')} rows={3} value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} maxLength={500} />
+                                    <select className={m('map-input')} value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                                        {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.icon} {c.value}</option>)}
+                                    </select>
+                                    <select className={m('map-input')} value={formData.priority} onChange={e => setFormData({ ...formData, priority: e.target.value })}>
+                                        {PRIORITY_LEVELS.map(p => <option key={p} value={p}>{p}</option>)}
+                                    </select>
+                                    <div className={m('map-form-btns')}>
+                                        <button type="submit" className={m('btn-map-submit')} disabled={submitting}>{submitting ? '⏳ Se trimite...' : '📤 Trimite'}</button>
+                                        <button type="button" className={m('btn-map-cancel')} onClick={() => setNewLocation(null)}>Anulează</button>
+                                    </div>
+                                </form>
+                            )}
+                        />
+                        <IssueMarkersLayer
+                            issues={filteredIssues}
+                            selectedIssueId={selectedIssue?.id}
+                            onSelectIssue={setSelectedIssue}
+                            onVote={handleVote}
+                            renderPopup={(issue) => (
+                                <div className={m('map-popup')}>
+                                    <strong>{issue.title}</strong>
+                                    <div className={m('popup-meta')}><StatusBadge status={issue.status} /><PriorityDot priority={issue.priority} /></div>
+                                    <p>{issue.description?.substring(0, 100)}{issue.description?.length > 100 ? '...' : ''}</p>
+                                    <div className={m('popup-footer')}>
+                                        <span className={m('popup-votes')}>▲ {issue.votes || 0} voturi</span>
+                                        <button onClick={() => setSelectedIssue(issue)} className={m('popup-detail-btn')}>Detalii →</button>
+                                    </div>
+                                </div>
+                            )}
+                        />
+                    </BaseMap>
+                    <div className={m('map-legend')}>
+                        <span className={m('legend-item')}><span className={m('legend-dot')} style={{ background: '#ef4444' }} />Nou</span>
+                        <span className={m('legend-item')}><span className={m('legend-dot')} style={{ background: '#f59e0b' }} />În lucru</span>
+                        <span className={m('legend-item')}><span className={m('legend-dot')} style={{ background: '#3b82f6' }} />Verificare</span>
+                        <span className={m('legend-item')}><span className={m('legend-dot')} style={{ background: '#10b981' }} />Rezolvat</span>
                     </div>
                 </div>
 
                 {/* Lista sesizări */}
-                <div className="issues-list-card">
-                    <div className="list-header">
-                        <h2 className="list-title">Sesizări <span className="count-pill">{filteredIssues.length}</span></h2>
-                        {isAdmin && <span className="admin-chip">Admin</span>}
+                <div className={m('issues-list-card')}>
+                    <div className={m('list-header')}>
+                        <h2 className={m('list-title')}>Sesizări <span className={m('count-pill')}>{filteredIssues.length}</span></h2>
+                        {isAdmin && <span className={m('admin-chip')}>Admin</span>}
                     </div>
-                    <div className="issues-scroll">
+                    <div className={m('issues-scroll')}>
                         {isLoading ? Array(4).fill(0).map((_, i) => <SkeletonRow key={i} />) :
                             filteredIssues.length === 0 ? (
-                                <div className="empty-state">
-                                    <div className="empty-icon">📭</div>
+                                <div className={m('empty-state')}>
+                                    <div className={m('empty-icon')}>📭</div>
                                     <p>Nicio sesizare găsită</p>
                                     <span>Încearcă să schimbi filtrele</span>
                                 </div>
                             ) : filteredIssues.map(issue => (
-                                <div key={issue.id} className="issue-row" onClick={() => setSelectedIssue(issue)}>
-                                    <div className="issue-row-top">
-                                        <span className="issue-cat-icon">{CATEGORIES.find(c => c.value === issue.category)?.icon || '📋'}</span>
-                                        <div className="issue-row-content">
-                                            <div className="issue-row-title-line">
-                                                <span className="issue-row-title">{issue.title}</span>
+                                <div key={issue.id} className={m('issue-row')} onClick={() => setSelectedIssue(issue)}>
+                                    <div className={m('issue-row-top')}>
+                                        <span className={m('issue-cat-icon')}>{CATEGORIES.find(c => c.value === issue.category)?.icon || '📋'}</span>
+                                        <div className={m('issue-row-content')}>
+                                            <div className={m('issue-row-title-line')}>
+                                                <span className={m('issue-row-title')}>{issue.title}</span>
                                                 <StatusBadge status={issue.status} />
                                             </div>
-                                            <div className="issue-row-sub">
-                                                {issue.category && <span className="issue-cat">{issue.category}</span>}
+                                            <div className={m('issue-row-sub')}>
+                                                {issue.category && <span className={m('issue-cat')}>{issue.category}</span>}
                                                 {issue.priority && <PriorityDot priority={issue.priority} />}
-                                                <span className="issue-date">{issue.created_at ? new Date(issue.created_at).toLocaleDateString('ro-RO') : ''}</span>
+                                                <span className={m('issue-date')}>{issue.created_at ? new Date(issue.created_at).toLocaleDateString('ro-RO') : ''}</span>
                                             </div>
-                                            <p className="issue-row-desc">{issue.description?.substring(0, 85)}{issue.description?.length > 85 ? '...' : ''}</p>
-                                            <div className="issue-row-actions" onClick={e => e.stopPropagation()}>
-                                                <button className={`vote-btn ${votedIssues.has(issue.id) ? 'voted' : ''}`} onClick={e => handleVote(issue.id, e)}>▲ {issue.votes || 0}</button>
-                                                <button className={`follow-btn ${followedIssues.has(issue.id) ? 'followed' : ''}`} onClick={e => handleFollow(issue.id, e)}>👁 Urmăresc</button>
-                                                <button className={`flag-btn ${flaggedIssues.has(issue.id) ? 'flagged' : ''}`} onClick={e => handleFlag(issue.id, e)} disabled={flaggedIssues.has(issue.id)}>🚩</button>
+                                            <p className={m('issue-row-desc')}>{issue.description?.substring(0, 85)}{issue.description?.length > 85 ? '...' : ''}</p>
+                                            <div className={m('issue-row-actions')} onClick={e => e.stopPropagation()}>
+                                                <button className={m(`vote-btn ${votedIssues.has(issue.id) ? 'voted' : ''}`)} onClick={e => handleVote(issue.id, e)}>▲ {issue.votes || 0}</button>
+                                                <button className={m(`follow-btn ${followedIssues.has(issue.id) ? 'followed' : ''}`)} onClick={e => handleFollow(issue.id, e)}>👁 Urmăresc</button>
+                                                <button className={m(`flag-btn ${flaggedIssues.has(issue.id) ? 'flagged' : ''}`)} onClick={e => handleFlag(issue.id, e)} disabled={flaggedIssues.has(issue.id)}>🚩</button>
                                                 {isAdmin && (
-                                                    <select value={issue.status} onChange={e => updateStatus(issue.id, e.target.value, e)} className="admin-select-inline" onClick={e => e.stopPropagation()}>
+                                                    <select value={issue.status} onChange={e => updateStatus(issue.id, e.target.value, e)} className={m('admin-select-inline')} onClick={e => e.stopPropagation()}>
                                                         <option>Nou</option><option>În lucru</option><option>În verificare</option><option>Rezolvat</option>
                                                     </select>
                                                 )}
@@ -669,26 +648,26 @@ const Home = () => {
             </section>
 
             {/* ── ACTIVITATE RECENTĂ ── */}
-            <section className="activity-section">
-                <div className="activity-card">
-                    <div className="activity-header">
+            <section className={m('activity-section')}>
+                <div className={m('activity-card')}>
+                    <div className={m('activity-header')}>
                         <div>
                             <h2>🕐 Activitate recentă</h2>
                             <p>Ultimele sesizări adăugate în Galați</p>
                         </div>
                     </div>
-                    <div className="activity-feed">
+                    <div className={m('activity-feed')}>
                         {recentActivity.map((issue, i) => (
-                            <div key={issue.id} className="activity-item" onClick={() => setSelectedIssue(issue)} style={{ animationDelay: `${i * 80}ms` }}>
-                                <div className="activity-timeline-dot" style={{ background: issue.priority === 'Urgentă' ? '#ef4444' : issue.priority === 'Ridicată' ? '#f97316' : '#3b82f6' }} />
-                                <div className="activity-content">
-                                    <div className="activity-title">{CATEGORIES.find(c => c.value === issue.category)?.icon} {issue.title}</div>
-                                    <div className="activity-meta">
+                            <div key={issue.id} className={m('activity-item')} onClick={() => setSelectedIssue(issue)} style={{ animationDelay: `${i * 80}ms` }}>
+                                <div className={m('activity-timeline-dot')} style={{ background: issue.priority === 'Urgentă' ? '#ef4444' : issue.priority === 'Ridicată' ? '#f97316' : '#3b82f6' }} />
+                                <div className={m('activity-content')}>
+                                    <div className={m('activity-title')}>{CATEGORIES.find(c => c.value === issue.category)?.icon} {issue.title}</div>
+                                    <div className={m('activity-meta')}>
                                         <StatusBadge status={issue.status} />
-                                        <span className="activity-time">
+                                        <span className={m('activity-time')}>
                                             {issue.created_at ? new Date(issue.created_at).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' }) : ''}
                                         </span>
-                                        <span className="activity-votes">▲ {issue.votes || 0}</span>
+                                        <span className={m('activity-votes')}>▲ {issue.votes || 0}</span>
                                     </div>
                                 </div>
                             </div>
@@ -697,20 +676,20 @@ const Home = () => {
                 </div>
 
                 {/* Hartă mini categorii */}
-                <div className="cat-stats-card">
-                    <div className="cs-header"><h3>📊 Sesizări pe categorie</h3></div>
-                    <div className="cs-list">
+                <div className={m('cat-stats-card')}>
+                    <div className={m('cs-header')}><h3>📊 Sesizări pe categorie</h3></div>
+                    <div className={m('cs-list')}>
                         {CATEGORIES.map(cat => {
                             const count = issues.filter(i => i.category === cat.value).length;
                             const pct = issues.length ? (count / issues.length) * 100 : 0;
                             return (
-                                <div key={cat.value} className="cs-item" onClick={() => setCatFilter(cat.value)}>
-                                    <span className="cs-icon">{cat.icon}</span>
-                                    <span className="cs-name">{cat.value}</span>
-                                    <div className="cs-bar-wrap">
-                                        <div className="cs-bar" style={{ width: `${pct}%` }} />
+                                <div key={cat.value} className={m('cs-item')} onClick={() => setCatFilter(cat.value)}>
+                                    <span className={m('cs-icon')}>{cat.icon}</span>
+                                    <span className={m('cs-name')}>{cat.value}</span>
+                                    <div className={m('cs-bar-wrap')}>
+                                        <div className={m('cs-bar')} style={{ width: `${pct}%` }} />
                                     </div>
-                                    <span className="cs-count">{count}</span>
+                                    <span className={m('cs-count')}>{count}</span>
                                 </div>
                             );
                         })}
@@ -719,18 +698,18 @@ const Home = () => {
             </section>
 
             {/* ── CUM FUNCȚIONEAZĂ ── */}
-            <section className="how-section">
-                <h2 className="section-title">Cum funcționează?</h2>
-                <div className="how-grid">
+            <section className={m('how-section')}>
+                <h2 className={m('section-title')}>Cum funcționează?</h2>
+                <div className={m('how-grid')}>
                     {[
                         { num: '01', icon: '📍', title: 'Identifici problema', desc: 'Dai click pe hartă exact unde se află problema — groapă, felinar stricat, deșeuri ilegale.' },
                         { num: '02', icon: '📝', title: 'Completezi sesizarea', desc: 'Adaugi titlu, descriere și selectezi categoria și prioritatea problemei.' },
                         { num: '03', icon: '🏛️', title: 'Primăria preia sesizarea', desc: 'Sesizarea ajunge direct la departamentul responsabil care o analizează și alocă resurse.' },
                         { num: '04', icon: '✅', title: 'Urmărești rezolvarea', desc: 'Primești notificări la fiecare actualizare de status până la rezolvarea completă.' },
                     ].map(step => (
-                        <div key={step.num} className="how-step">
-                            <div className="how-num">{step.num}</div>
-                            <div className="how-icon">{step.icon}</div>
+                        <div key={step.num} className={m('how-step')}>
+                            <div className={m('how-num')}>{step.num}</div>
+                            <div className={m('how-icon')}>{step.icon}</div>
                             <h3>{step.title}</h3>
                             <p>{step.desc}</p>
                         </div>
@@ -739,20 +718,20 @@ const Home = () => {
             </section>
 
             {/* ── CTA BANNER ── */}
-            <section className="cta-section">
-                <div className="cta-inner">
-                    <div className="cta-bg-glow" />
-                    <div className="cta-content">
+            <section className={m('cta-section')}>
+                <div className={m('cta-inner')}>
+                    <div className={m('cta-bg-glow')} />
+                    <div className={m('cta-content')}>
                         <h2>Fii parte din schimbare</h2>
                         <p>Alătură-te celor care contribuie activ la îmbunătățirea Galațiului.</p>
                         {!user ? (
-                            <div className="cta-btns">
-                                <a href="/login" className="btn-primary" style={{ textDecoration: 'none' }}>🚀 Creează cont gratuit</a>
-                                <a href="#map-section" className="btn-secondary" style={{ textDecoration: 'none' }}>📍 Explorează harta</a>
+                            <div className={m('cta-btns')}>
+                                <a href="/login" className={m('btn-primary')} style={{ textDecoration: 'none' }}>🚀 Creează cont gratuit</a>
+                                <a href="#map-section" className={m('btn-secondary')} style={{ textDecoration: 'none' }}>📍 Explorează harta</a>
                             </div>
                         ) : (
-                            <div className="cta-btns">
-                                <a href="#map-section" className="btn-primary" style={{ textDecoration: 'none' }}>✚ Raportează o problemă</a>
+                            <div className={m('cta-btns')}>
+                                <a href="#map-section" className={m('btn-primary')} style={{ textDecoration: 'none' }}>✚ Raportează o problemă</a>
                             </div>
                         )}
                     </div>
@@ -760,9 +739,9 @@ const Home = () => {
             </section>
 
             {/* ── FAQ ── */}
-            <section className="faq-section">
-                <h2 className="section-title">Întrebări frecvente</h2>
-                <div className="faq-grid">
+            <section className={m('faq-section')}>
+                <h2 className={m('section-title')}>Întrebări frecvente</h2>
+                <div className={m('faq-grid')}>
                     {[
                         { q: 'Cum funcționează votul?', a: 'Sesizările cu cele mai multe voturi sunt prioritizate. Fiecare utilizator autentificat poate susține o sesizare o singură dată.' },
                         { q: 'Pot urmări stadiul rezolvării?', a: 'Da! Apasă „Urmăresc" pe orice sesizare și vei primi notificări la fiecare schimbare de status.' },
@@ -771,7 +750,7 @@ const Home = () => {
                         { q: 'Datele mele sunt în siguranță?', a: 'Da. Folosim criptare și nu partajăm datele personale cu terți. Identitatea poate fi anonimizată.' },
                         { q: 'Cine poate vedea sesizările?', a: 'Toate sesizările sunt publice pe hartă. Datele de contact sunt vizibile doar pentru administratori.' },
                     ].map((item, i) => (
-                        <details key={i} className="faq-item">
+                        <details key={i} className={m('faq-item')}>
                             <summary>{item.q}</summary>
                             <p>{item.a}</p>
                         </details>
@@ -780,181 +759,24 @@ const Home = () => {
             </section>
 
             {/* ── FOOTER ── */}
-            <footer className="main-footer">
-                <div className="footer-inner">
-                    <div className="footer-brand">
-                        <span className="footer-logo">Galați<span>Civic</span></span>
+            <footer className={m('main-footer')}>
+                <div className={m('footer-inner')}>
+                    <div className={m('footer-brand')}>
+                        <span className={m('footer-logo')}>Galați<span>Civic</span></span>
                         <p>Platforma civică oficială a Municipiului Galați</p>
                     </div>
-                    <div className="footer-links">
+                    <div className={m('footer-links')}>
                         <a href="/about">Despre platformă</a>
                         <a href="/privacy">Confidențialitate</a>
                         <a href="/contact">Contact</a>
                         <a href="https://www.primaria-galati.ro" target="_blank" rel="noreferrer">Primăria Galați ↗</a>
                     </div>
                 </div>
-                <div className="footer-bottom">
+                <div className={m('footer-bottom')}>
                     <p>© 2026 Galați Civic · Vocea ta contează în orașul nostru.</p>
                 </div>
             </footer>
 
-            {/* Stiluri suplimentare pentru elementele noi */}
-            <style>{`
-                /* ── Banner urgente ── */
-                .urgent-banner {
-                    background: linear-gradient(90deg, rgba(239,68,68,.15), rgba(239,68,68,.08));
-                    border-bottom: 1px solid rgba(239,68,68,.25);
-                    padding: 0 24px;
-                    animation: urgentSlideIn .4s ease both;
-                }
-                @keyframes urgentSlideIn { from { height: 0; opacity: 0; } to { height: auto; opacity: 1; } }
-                .urgent-banner-inner {
-                    max-width: 1200px; margin: 0 auto;
-                    display: flex; justify-content: space-between; align-items: center;
-                    padding: 10px 0; gap: 12px;
-                }
-                .urgent-banner-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-                .urgent-pulse-dot {
-                    width: 8px; height: 8px; border-radius: 50%; background: #ef4444; flex-shrink: 0;
-                    animation: urgentPulse 1s ease-in-out infinite;
-                }
-                @keyframes urgentPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.4); } 50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); } }
-                .urgent-label { font-size: 10px; font-weight: 800; color: #ef4444; letter-spacing: 1.5px; background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.3); border-radius: 4px; padding: 2px 7px; }
-                .urgent-text  { font-size: 13px; color: #fca5a5; }
-                .urgent-title { font-size: 13px; font-weight: 600; color: #fca5a5; text-decoration: underline; }
-                .urgent-close { background: none; border: none; color: #fca5a5; cursor: pointer; font-size: 14px; padding: 4px 8px; border-radius: 4px; transition: background .15s; flex-shrink: 0; }
-                .urgent-close:hover { background: rgba(239,68,68,.15); }
-
-                /* ── Hero mini stats ── */
-                .hero-mini-stats {
-                    display: flex; justify-content: center; align-items: center; gap: 0;
-                    margin-top: 36px; background: rgba(255,255,255,.04);
-                    border: 1px solid rgba(255,255,255,.08); border-radius: 16px;
-                    padding: 16px 32px; gap: 32px; flex-wrap: wrap;
-                    animation: heroFadeIn .8s .4s ease both;
-                }
-                .hero-mini-stat { text-align: center; }
-                .hero-mini-stat span:first-child { display: block; font-size: 1.6rem; font-weight: 700; color: #e8f0fe; }
-                .hero-mini-stat span:last-child { display: block; font-size: 11px; color: #4d6380; margin-top: 3px; font-weight: 500; text-transform: uppercase; letter-spacing: .6px; }
-                .hero-mini-divider { width: 1px; height: 40px; background: rgba(255,255,255,.08); }
-
-                /* ── Stat trend ── */
-                .stat-trend { font-size: 10px; margin-top: 4px; font-weight: 500; }
-
-                /* ── Progres ── */
-                .progress-section {
-                    display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px;
-                    max-width: 1200px; margin: 0 auto; padding: 0 24px 40px; width: 100%;
-                }
-                .progress-card {
-                    background: var(--card-bg); border: 1px solid var(--card-border);
-                    border-radius: var(--radius-lg); padding: 24px; backdrop-filter: blur(16px);
-                }
-                .progress-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
-                .progress-header h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-                .progress-header p  { font-size: 12px; color: var(--text-muted); }
-                .progress-pct { font-size: 2rem; font-weight: 800; font-family: 'Playfair Display', serif; }
-                .progress-bar-wrap { margin-bottom: 8px; }
-                .progress-bar-track { background: rgba(255,255,255,.06); border-radius: 6px; height: 8px; overflow: hidden; }
-                .progress-bar-fill { height: 100%; border-radius: 6px; transition: width 1s ease; }
-                .progress-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 20px; }
-                .progress-breakdown { display: flex; justify-content: space-around; align-items: flex-end; height: 80px; gap: 10px; }
-                .pb-item { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
-                .pb-bar { width: 100%; border-radius: 4px 4px 0 0; transition: height .8s ease; min-height: 4px; }
-                .pb-count { font-size: 13px; font-weight: 700; }
-                .pb-label { font-size: 9px; color: var(--text-muted); text-align: center; font-weight: 500; }
-
-                /* Top votate */
-                .top-voted-card {
-                    background: var(--card-bg); border: 1px solid var(--card-border);
-                    border-radius: var(--radius-lg); padding: 20px; backdrop-filter: blur(16px);
-                }
-                .tv-header { margin-bottom: 14px; }
-                .tv-header h3 { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
-                .tv-header span { font-size: 12px; color: var(--text-muted); }
-                .tv-list { display: flex; flex-direction: column; gap: 8px; }
-                .tv-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.05); border-radius: 10px; cursor: pointer; transition: all .15s; }
-                .tv-item:hover { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); transform: translateX(3px); }
-                .tv-rank { font-size: 16px; font-weight: 800; font-family: 'Playfair Display', serif; min-width: 28px; }
-                .tv-content { flex: 1; min-width: 0; }
-                .tv-title { font-size: 12px; font-weight: 600; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-                .tv-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-                .tv-meta span { font-size: 10px; color: var(--text-muted); }
-                .tv-votes { flex-shrink: 0; }
-                .tv-vote-num { font-size: 13px; font-weight: 700; color: var(--primary); }
-
-                /* ── Activitate recentă ── */
-                .activity-section {
-                    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
-                    max-width: 1200px; margin: 0 auto; padding: 0 24px 40px; width: 100%;
-                }
-                .activity-card, .cat-stats-card {
-                    background: var(--card-bg); border: 1px solid var(--card-border);
-                    border-radius: var(--radius-lg); padding: 20px; backdrop-filter: blur(16px);
-                }
-                .activity-header { margin-bottom: 16px; }
-                .activity-header h2 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-                .activity-header p  { font-size: 12px; color: var(--text-muted); }
-                .activity-feed { display: flex; flex-direction: column; gap: 0; position: relative; }
-                .activity-feed::before { content: ''; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 1px; background: rgba(255,255,255,.06); }
-                .activity-item {
-                    display: flex; gap: 12px; align-items: flex-start; padding: 10px 0 10px 0;
-                    cursor: pointer; transition: all .15s; position: relative;
-                    animation: fadeInUp .4s ease both;
-                }
-                .activity-item:hover .activity-content { color: var(--primary); }
-                .activity-timeline-dot { width: 15px; height: 15px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; border: 2px solid #080f1e; z-index: 1; }
-                .activity-content { flex: 1; min-width: 0; }
-                .activity-title { font-size: 13px; font-weight: 500; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-                .activity-meta { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-                .activity-time  { font-size: 10px; color: var(--text-muted); }
-                .activity-votes { font-size: 10px; color: var(--primary); font-weight: 600; margin-left: auto; }
-
-                /* Statistici categorii */
-                .cs-header { margin-bottom: 14px; }
-                .cs-header h3 { font-size: 14px; font-weight: 700; }
-                .cs-list { display: flex; flex-direction: column; gap: 8px; }
-                .cs-item { display: flex; align-items: center; gap: 8px; cursor: pointer; transition: all .15s; padding: 4px 6px; border-radius: 6px; }
-                .cs-item:hover { background: rgba(255,255,255,.04); }
-                .cs-icon { font-size: 14px; width: 22px; text-align: center; }
-                .cs-name { font-size: 12px; color: var(--text-dim); min-width: 110px; font-weight: 500; }
-                .cs-bar-wrap { flex: 1; height: 6px; background: rgba(255,255,255,.06); border-radius: 3px; overflow: hidden; }
-                .cs-bar { height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); border-radius: 3px; transition: width .8s ease; min-width: 3px; }
-                .cs-count { font-size: 12px; color: var(--text-muted); font-weight: 600; min-width: 20px; text-align: right; }
-
-                /* ── CTA Section ── */
-                .cta-section {
-                    max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; width: 100%;
-                }
-                .cta-inner {
-                    position: relative; overflow: hidden;
-                    background: linear-gradient(135deg, rgba(59,130,246,.12), rgba(16,185,129,.08));
-                    border: 1px solid rgba(59,130,246,.2); border-radius: 20px; padding: 48px 40px;
-                    text-align: center;
-                }
-                .cta-bg-glow {
-                    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-                    width: 600px; height: 300px;
-                    background: radial-gradient(ellipse, rgba(59,130,246,.1) 0%, transparent 70%);
-                    pointer-events: none;
-                }
-                .cta-content { position: relative; z-index: 1; }
-                .cta-content h2 { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; margin-bottom: 10px; background: linear-gradient(135deg, #e8f0fe, #93c5fd); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-                .cta-content p  { font-size: 15px; color: var(--text-dim); margin-bottom: 28px; }
-                .cta-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-
-                @media (max-width: 1100px) {
-                    .progress-section { grid-template-columns: 1fr; }
-                    .activity-section { grid-template-columns: 1fr; }
-                }
-                @media (max-width: 640px) {
-                    .hero-mini-stats { gap: 16px; padding: 14px 20px; }
-                    .hero-mini-divider { display: none; }
-                    .cta-inner { padding: 32px 20px; }
-                    .cta-content h2 { font-size: 1.5rem; }
-                    .urgent-banner-inner { flex-direction: column; gap: 8px; align-items: flex-start; }
-                }
-            `}</style>
         </div>
     );
 };

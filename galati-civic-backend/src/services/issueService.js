@@ -1,45 +1,79 @@
-const supabaseAdmin = require('../config/supabase');
-const crypto = require('crypto');
+const supabase = require('../config/supabase');
 
-// Generăm codul unic: ex GAL-2026-A1B2
-const generateTrackingCode = () => {
-    const year = new Date().getFullYear();
-    const randomStr = crypto.randomBytes(2).toString('hex').toUpperCase();
-    return `GAL-${year}-${randomStr}`;
+const issuesTable = process.env.SUPABASE_ISSUES_TABLE || 'issues';
+
+const listIssues = async () => {
+    const { data, error } = await supabase
+        .from(issuesTable)
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
 };
 
-const createIssue = async (issueData, userId) => {
-    const trackingCode = generateTrackingCode();
-
-    const { data: issue, error } = await supabaseAdmin
-        .from('issues')
-        .insert({
-            tracking_code: trackingCode,
-            author_id: userId,
-            title: issueData.title,
-            description: issueData.description,
-            category_id: issueData.category_id,
-            lat: issueData.lat,
-            lng: issueData.lng,
-            status: 'Nou'
-        })
-        .select()
+const createIssue = async (payload) => {
+    const { data, error } = await supabase
+        .from(issuesTable)
+        .insert([payload])
+        .select('*')
         .single();
 
-    if (error) throw new Error(error.message);
-    return issue;
-};
-
-const getAllIssues = async (filters = {}) => {
-    // MODIFICARE: Am scos "categories(name)" pentru că tabelele nu sunt legate prin Foreign Key în Supabase
-    let query = supabaseAdmin.from('issues').select('*'); 
-    
-    if (filters.status) query = query.eq('status', filters.status);
-    if (filters.category_id) query = query.eq('category_id', filters.category_id);
-    
-    const { data, error } = await query.order('created_at', { ascending: false });
-    if (error) throw new Error(error.message);
+    if (error) throw error;
     return data;
 };
 
-module.exports = { createIssue, getAllIssues };
+const updateIssue = async (id, payload) => {
+    const { data, error } = await supabase
+        .from(issuesTable)
+        .update(payload)
+        .eq('id', id)
+        .select('*')
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+const deleteIssue = async (id) => {
+    const { error, count } = await supabase
+        .from(issuesTable)
+        .delete({ count: 'exact' })
+        .eq('id', id);
+
+    if (error) throw error;
+    return count;
+};
+
+const getIssueVotes = async (id) => {
+    const { data, error } = await supabase
+        .from(issuesTable)
+        .select('id, votes')
+        .eq('id', id)
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+const updateIssueVotes = async (id, votes) => {
+    const { data, error } = await supabase
+        .from(issuesTable)
+        .update({ votes })
+        .eq('id', id)
+        .select('*')
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+module.exports = {
+    issuesTable,
+    listIssues,
+    createIssue,
+    updateIssue,
+    deleteIssue,
+    getIssueVotes,
+    updateIssueVotes,
+};

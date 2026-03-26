@@ -1,45 +1,113 @@
-const issueService = require('../../src/services/issueService');
-const supabaseAdmin = require('../config/supabase');
+const issuesService = require('../services/issuesService');
 
-exports.createIssue = async (req, res) => {
+const mapIssuePayload = (body = {}) => ({
+    title: body.title,
+    description: body.description,
+    lat: body.lat ?? body.latitude,
+    lng: body.lng ?? body.longitude,
+    category: body.category ?? null,
+    category_id: body.category_id ?? null,
+    priority: body.priority ?? 'Medie',
+    status: body.status ?? 'Nou',
+    user_id: body.user_id ?? null,
+});
+
+const listIssues = async (_req, res) => {
     try {
-        const userId = req.user.id; // Extras de middleware-ul auth
-        const newIssue = await issueService.createIssue(req.body, userId);
-        res.status(201).json({ message: 'Sesizare creată cu succes', data: newIssue });
-    } catch (error) {
-        res.status(400).json({ error: error.message });
+        const data = await issuesService.listIssues();
+        return res.json(data);
+    } catch (err) {
+        console.error('[DB ERROR GET ISSUES]:', err);
+        return res.status(500).json({ error: 'Eroare la interogarea bazei de date.' });
     }
 };
 
-exports.getIssues = async (req, res) => {
+const createIssue = async (req, res) => {
+    const payload = mapIssuePayload(req.body);
+
+    if (!payload.title || !payload.description || payload.lat == null || payload.lng == null) {
+        return res.status(400).json({ error: 'title, description, lat și lng sunt obligatorii.' });
+    }
+
     try {
-        // Preluăm filtrele din query params (ex: ?status=Nou)
-        const filters = {
-            status: req.query.status,
-            category_id: req.query.category_id
-        };
-        const issues = await issueService.getAllIssues(filters);
-        res.status(200).json(issues);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+        const data = await issuesService.createIssue(payload);
+        return res.status(201).json(data);
+    } catch (err) {
+        console.error('[DB ERROR POST ISSUE]:', err);
+        return res.status(500).json({ error: 'Eroare la inserarea raportului.' });
     }
 };
 
-exports.updateIssueStatus = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { new_status } = req.body;
+const updateIssue = async (req, res) => {
+    const { id } = req.params;
+    const allowedFields = ['title', 'description', 'status', 'priority', 'category', 'category_id', 'lat', 'lng', 'admin_reply'];
 
-        const { data, error } = await supabaseAdmin
-            .from('issues')
-            .update({ status: new_status, updated_at: new Date() })
-            .eq('id', id)
-            .select()
-            .single();
+    const updatePayload = Object.fromEntries(
+        Object.entries(req.body || {}).filter(([key, value]) => allowedFields.includes(key) && value !== undefined),
+    );
 
-        if (error) throw new Error(error.message);
-        res.status(200).json({ message: 'Status actualizat', data });
-    } catch (error) {
-        res.status(400).json({ error: error.message });
+    if (req.body?.latitude !== undefined) updatePayload.lat = req.body.latitude;
+    if (req.body?.longitude !== undefined) updatePayload.lng = req.body.longitude;
+    if (Object.keys(updatePayload).length === 0) {
+        return res.status(400).json({ error: 'Nu există câmpuri valide pentru actualizare.' });
     }
+
+    try {
+        const data = await issuesService.updateIssue(id, updatePayload);
+        if (!data) return res.status(404).json({ error: 'Raportul nu a fost găsit.' });
+        return res.json(data);
+    } catch (err) {
+        console.error('[DB ERROR PUT ISSUE]:', err);
+        return res.status(500).json({ error: 'Eroare la actualizarea raportului.' });
+    }
+};
+
+const deleteIssue = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const count = await issuesService.deleteIssue(id);
+        if (!count) return res.status(404).json({ error: 'Raportul nu a fost găsit.' });
+
+        return res.status(204).send();
+    } catch (err) {
+        console.error('[DB ERROR DELETE ISSUE]:', err);
+        return res.status(500).json({ error: 'Eroare la ștergerea raportului.' });
+    }
+};
+
+const voteIssue = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const issue = await issuesService.getIssueVotes(id);
+        const nextVotes = (issue.votes || 0) + 1;
+        const data = await issuesService.updateIssueVotes(id, nextVotes);
+
+        return res.json(data);
+    } catch (err) {
+        console.error('[DB ERROR POST ISSUE VOTE]:', err);
+        return res.status(500).json({ error: 'Eroare la votarea raportului.' });
+    }
+};
+
+const flagIssue = async (_req, res) => res.status(202).json({ message: 'Raportarea a fost înregistrată.' });
+
+const replyIssue = async (req, res) => {
+    const message = req.body?.message;
+    if (!message) {
+        return res.status(400).json({ error: 'Mesajul este obligatoriu.' });
+    }
+
+    req.body.admin_reply = message;
+    return updateIssue(req, res);
+};
+
+module.exports = {
+    listIssues,
+    createIssue,
+    updateIssue,
+    deleteIssue,
+    voteIssue,
+    flagIssue,
+    replyIssue,
 };
