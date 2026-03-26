@@ -30,11 +30,11 @@ const CATEGORIES = [
     { value: 'Iluminat', label: '💡 Iluminat', desc: 'Felinare, prize stradale' },
     { value: 'Apă/Canal', label: '💧 Apă/Canal', desc: 'Scurgeri, inundații' },
     { value: 'Spații verzi', label: '🌳 Spații verzi', desc: 'Parcuri, copaci, zone verzi' },
-    { value: 'Salubritate', label: '🗑️ Salubritate', desc: 'Deșeuri, curățenie' },
+    { value: 'Salubritate', label: ' Salubritate', desc: 'Deșeuri, curățenie' },
     { value: 'Zgomot/Poluare', label: '🔊 Zgomot/Poluare', desc: 'Poluare fonică, aer, apă' },
     { value: 'Vandalism', label: '🚧 Vandalism', desc: 'Graffiti, distrugeri proprietăți' },
     { value: 'Trafic/Parcare', label: '🚗 Trafic/Parcare', desc: 'Semafoare, parcări ilegale' },
-    { value: 'Altele', label: '📋 Altele', desc: 'Orice altă problemă urbană' },
+    { value: 'Altele', label: ' Altele', desc: 'Orice altă problemă urbană' },
 ];
 const PRIORITIES = [
     { value: 'Scăzută', color: '#22c55e', desc: 'Problemă minoră, nu urgentă' },
@@ -133,7 +133,7 @@ const CreateIssueContainer = ({ initialTab = 'my' }) => {
         setSubmitting(true);
         try {
             await createIssue(form);
-            showToast('Sesizare trimisă cu succes! ✓', 'success');
+            showToast('Sesizare trimisă cu succes!', 'success');
             resetForm();
             setTab('my');
         } catch (error) {
@@ -156,7 +156,7 @@ const CreateIssueContainer = ({ initialTab = 'my' }) => {
         } catch {
             return showToast('Eroare la actualizare.', 'error');
         }
-        showToast('Sesizare actualizată! ✓', 'success');
+        showToast('Sesizare actualizată!', 'success');
         setEditingIssue(null);
         setEditLocation(null);
     };
@@ -189,7 +189,7 @@ const CreateIssueContainer = ({ initialTab = 'my' }) => {
     const filteredForMap = useMemo(() => allIssues.filter((i) => (mapFilter === 'Toate' || i.status === mapFilter) && (!mapSearch || i.title?.toLowerCase().includes(mapSearch.toLowerCase())) && i.lat && i.lng), [allIssues, mapFilter, mapSearch]);
 
     if (!user) {
-        return <div className="ci-page"><div className="ci-auth-wall"><div className="ci-auth-icon">🔒</div><h2>Autentificare necesară</h2><p>Trebuie să fii logat pentru a raporta sau gestiona sesizări.</p><div className="ci-auth-btns"><Link to="/login" className="ci-btn-primary">🔐 Autentifică-te</Link><Link to="/register" className="ci-btn-secondary">Creează cont gratuit →</Link></div></div><style>{pageStyles}</style></div>;
+        return <div className="ci-page"><div className="ci-auth-wall"><div className="ci-auth-icon">🔒</div><h2>Autentificare necesară</h2><p>Trebuie să fii logat pentru a raporta sau gestiona sesizări.</p><div className="ci-auth-btns"><Link to="/login" className="ci-btn-primary">Autentifică-te</Link><Link to="/register" className="ci-btn-secondary">Creează cont gratuit →</Link></div></div><style>{pageStyles}</style></div>;
     }
 
     return (
@@ -207,8 +207,8 @@ const CreateIssueContainer = ({ initialTab = 'my' }) => {
             {selectedIssue && (
                 <div className="ci-overlay" onClick={() => setSelectedIssue(null)}>
                     <div className="ci-modal" onClick={(e) => e.stopPropagation()}>
-                        <div className="ci-modal-header"><div className="ci-modal-title-wrap"><span className="ci-modal-cat-icon">{CATEGORIES.find((c) => c.value === selectedIssue.category)?.label?.split(' ')[0] || '📋'}</span><div><div className="ci-modal-title">{selectedIssue.title}</div><div className="ci-modal-sub">#{selectedIssue.id} · {selectedIssue.category}</div></div></div><button className="ci-modal-close" onClick={() => setSelectedIssue(null)}>✕</button></div>
-                        <div className="ci-modal-body"><div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}><StatusBadge status={selectedIssue.status} /><span className="ci-modal-priority" style={{ color: PRIORITIES.find((p) => p.value === selectedIssue.priority)?.color }}>● {selectedIssue.priority}</span></div><p className="ci-modal-desc">{selectedIssue.description}</p><div className="ci-modal-actions"><button className={`ci-vote-btn-lg ${votedIssues.has(selectedIssue.id) ? 'voted' : ''}`} onClick={() => handleVote(selectedIssue.id)}>▲ Susțin ({selectedIssue.votes || 0})</button>{selectedIssue.isOwn && <><button className="ci-modal-btn ci-edit-btn" onClick={() => { openEdit(selectedIssue); setSelectedIssue(null); }}>✏️ Editează</button><button className="ci-modal-btn ci-delete-btn" onClick={() => { setDeleteConfirm(selectedIssue.id); setSelectedIssue(null); }}>🗑️ Șterge</button></>}</div></div>
+                        <div className="ci-modal-header"><div className="ci-modal-title-wrap"><span className="ci-modal-cat-icon">{CATEGORIES.find((c) => c.value === selectedIssue.category)?.label?.split(' ')[0] || ''}</span><div><div className="ci-modal-title">{selectedIssue.title}</div><div className="ci-modal-sub">#{selectedIssue.id} · {selectedIssue.category}</div></div></div><button className="ci-modal-close" onClick={() => setSelectedIssue(null)}>✕</button></div>
+                        <div className="ci-modal-body"><div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}><StatusBadge status={selectedIssue.status} /><span className="ci-modal-priority" style={{ color: PRIORITIES.find((p) => p.value === selectedIssue.priority)?.color }}>● {selectedIssue.priority}</span></div><p className="ci-modal-desc">{selectedIssue.description}</p><div className="ci-modal-actions"><button className={`ci-vote-btn-lg ${votedIssues.has(selectedIssue.id) ? 'voted' : ''}`} onClick={() => handleVote(selectedIssue.id)}>▲ Susțin ({selectedIssue.votes || 0})</button>{selectedIssue.isOwn && <><button className="ci-modal-btn ci-edit-btn" onClick={() => { openEdit(selectedIssue); setSelectedIssue(null); }}>Editează</button><button className="ci-modal-btn ci-delete-btn" onClick={() => { setDeleteConfirm(selectedIssue.id); setSelectedIssue(null); }}>Șterge</button></>}</div></div>
                     </div>
                 </div>
             )}

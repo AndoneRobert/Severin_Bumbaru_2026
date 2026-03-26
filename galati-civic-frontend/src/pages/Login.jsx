@@ -69,7 +69,7 @@ const Login = () => {
             if (register) {
                 await register(email, password, { full_name: fullName, phone });
             }
-            setSuccess('Cont creat cu succes! Verifică emailul pentru confirmare, apoi autentifică-te.');
+            setSuccess('Cont creat cu succes');
             setTimeout(() => switchMode('login'), 3000);
         } catch (err) {
             setError(err.message || 'Eroare la înregistrare. Încearcă din nou.');
@@ -102,7 +102,7 @@ const Login = () => {
                 {/* Brand */}
                 <div className={m('auth-brand-wrap')}>
                     <Link to="/" className={m('auth-brand-link')}>
-                        <span className={m('auth-brand-icon')}>🏙️</span>
+                        <span className={m('auth-brand-icon')}></span>
                         <span className={m('auth-brand-name')}>Galați<span>Civic</span></span>
                     </Link>
                     <div className={m('auth-brand-tagline')}>Platforma civică a Municipiului Galați</div>
@@ -114,13 +114,13 @@ const Login = () => {
                         className={m(`auth-toggle-btn ${mode === 'login' ? 'active' : ''}`)}
                         onClick={() => switchMode('login')}
                     >
-                        🔐 Autentificare
+                        Autentificare
                     </button>
                     <button
                         className={m(`auth-toggle-btn ${mode === 'register' ? 'active' : ''}`)}
                         onClick={() => switchMode('register')}
                     >
-                        ✨ Cont nou
+                        Cont nou
                     </button>
                 </div>
 
@@ -135,8 +135,8 @@ const Login = () => {
                 </div>
 
                 {/* Eroare / Succes */}
-                {error && <div className={m('auth-alert auth-alert-error')}><span>⚠️</span>{error}</div>}
-                {success && <div className={m('auth-alert auth-alert-success')}><span>✓</span>{success}</div>}
+                {error && <div className={m('auth-alert auth-alert-error')}><span>Eroare:</span>{error}</div>}
+                {success && <div className={m('auth-alert auth-alert-success')}><span>OK</span>{success}</div>}
 
                 {/* ─── FORM LOGIN ─── */}
                 {mode === 'login' && (
@@ -315,7 +315,7 @@ const Login = () => {
                         <button type="submit" className={m('auth-submit-btn auth-submit-register')} disabled={loading}>
                             {loading
                                 ? <><span className={m('auth-spinner')} /> Se creează contul...</>
-                                : <><span>🚀</span> Creează cont gratuit</>
+                                : <>Creează cont gratuit</>
                             }
                         </button>
 
@@ -330,10 +330,10 @@ const Login = () => {
                 {/* Beneficii înregistrare */}
                 {mode === 'register' && (
                     <div className={m('auth-benefits')}>
-                        <div className={m('auth-benefit')}><span>📍</span> Raportează probleme direct pe hartă</div>
-                        <div className={m('auth-benefit')}><span>🔔</span> Primești notificări la actualizări</div>
+                        <div className={m('auth-benefit')}>Raportează probleme direct pe hartă</div>
+                        <div className={m('auth-benefit')}>Primești notificări la actualizări</div>
                         <div className={m('auth-benefit')}><span>▲</span>  Votezi sesizările comunității</div>
-                        <div className={m('auth-benefit')}><span>🏆</span> Contribui la îmbunătățirea orașului</div>
+                        <div className={m('auth-benefit')}>Contribui la îmbunătățirea orașului</div>
                     </div>
                 )}
             </div>

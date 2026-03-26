@@ -1,0 +1,84 @@
+.privacyPage {
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  min-height: calc(100vh - 70px);
+  padding: 48px 16px;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.container h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 3vw, 2.5rem);
+  color: #0f172a;
+}
+
+.title {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 3vw, 2.5rem);
+  color: #0f172a;
+}
+
+.updated {
+  margin: 0 0 24px;
+  color: #475569;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 14px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.card h2 {
+  margin: 0 0 8px;
+  color: #1e3a8a;
+  font-size: 1.15rem;
+}
+
+.cardTitle {
+  margin: 0 0 8px;
+  color: #1e3a8a;
+  font-size: 1.15rem;
+}
+
+.card p {
+  margin: 0;
+  color: #334155;
+  line-height: 1.65;
+}
+
+.cardText {
+  margin: 0;
+  color: #334155;
+  line-height: 1.65;
+}
+
+.card a {
+  color: #1d4ed8;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.card a:hover {
+  text-decoration: underline;
+}
+
+.contactBox {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(30, 58, 138, 0.08);
+  border: 1px solid rgba(30, 58, 138, 0.18);
+  color: #0f172a;
+}
+
+.contactBox a {
+  color: #1d4ed8;
+  font-weight: 700;
+}

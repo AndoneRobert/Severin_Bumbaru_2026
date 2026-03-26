@@ -4,7 +4,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import CreateIssue from './pages/CreateIssue';
-import Admin from './pages/Admin';
+import Privacy from './pages/Privacy';
 import { AuthProvider } from './context/AuthContext';
 import './App.css';
 
@@ -24,6 +24,7 @@ function App() {
               <Route path="/create-issue" element={<CreateIssue initialTab="new" />} />
               <Route path="/login" element={<Login />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/privacy" element={<Privacy />} />
               {/* <Routes path="/register" element={<Register />} />      */}
             </Routes>
           </main>

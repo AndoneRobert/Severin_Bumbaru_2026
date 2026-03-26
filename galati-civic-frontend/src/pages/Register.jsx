@@ -36,10 +36,7 @@ const Register = () => {
             <div className="auth-page">
                 <div className="auth-card glass-card" style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '3rem', marginBottom: '12px' }}>✅</div>
-                    <h2 style={{ color: '#e8f0fe', marginBottom: '10px' }}>Cont creat cu succes!</h2>
-                    <p style={{ color: '#4d6380', fontSize: '14px' }}>
-                        Verifică emailul pentru confirmare. Vei fi redirecționat...
-                    </p>
+                    <h2 style={{ color: '#e8f0fe', marginBottom: '10px' }}>Cont creat cu succes</h2>
                 </div>
                 <style>{`.auth-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#080f1e;}`}</style>
             </div>
@@ -59,7 +56,7 @@ const Register = () => {
 
                 {error && (
                     <div className="auth-error-box">
-                        <span>⚠️</span> {error}
+                        <span>Eroare:</span> {error}
                     </div>
                 )}
 
@@ -90,7 +87,7 @@ const Register = () => {
                     </p>
 
                     <button type="submit" className="btn-primary auth-btn" disabled={loading}>
-                        {loading ? <><span className="btn-spinner" /> Se înregistrează...</> : '🚀 Creează contul'}
+                        {loading ? <><span className="btn-spinner" /> Se înregistrează...</> : 'Creează contul'}
                     </button>
                 </form>
 

@@ -160,22 +160,22 @@ export default function Dashboard() {
             <div className="dash-header">
                 <div className="dash-header-left">
                     <h1 className="dash-title">
-                        {isAdmin ? '⚙️ Panou Administrator' : '📋 Sesizările mele'}
+                        {isAdmin ? '⚙️ Panou Administrator' : '📋 Toate sesizările'}
                     </h1>
                     <p className="dash-subtitle">
                         {isAdmin
                             ? `Gestionezi toate sesizările din municipiu · ${stats.total} total`
-                            : 'Urmărește și gestionează sesizările tale'}
+                            : ''}
                     </p>
                 </div>
             </div>
 
             {/* Stats mini */}
             <div className="dash-stats-row">
-                <StatMini value={stats.total} label="Total" color="#3b82f6" icon="📋" />
+                <StatMini value={stats.total} label="Total" color="#3b82f6" icon="" />
                 <StatMini value={stats.nou} label="Noi" color="#ef4444" icon="🆕" />
-                <StatMini value={stats.inLucru} label="În lucru" color="#f59e0b" icon="⚙️" />
-                <StatMini value={stats.rezolvat} label="Rezolvate" color="#10b981" icon="✅" />
+                <StatMini value={stats.inLucru} label="În lucru" color="#f59e0b" icon="L" />
+                <StatMini value={stats.rezolvat} label="Rezolvate" color="#10b981" icon="R" />
             </div>
 
             {/* Toolbar filtre */}

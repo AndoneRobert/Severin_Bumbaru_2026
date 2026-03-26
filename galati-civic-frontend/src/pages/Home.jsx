@@ -26,14 +26,31 @@ const m = (classNames) => classNames
     .join(' ');
 
 const CATEGORIES = [
-    { value: 'Infrastructură', icon: '🛣️' }, { value: 'Iluminat', icon: '💡' },
-    { value: 'Apă/Canal', icon: '💧' }, { value: 'Spații verzi', icon: '🌳' },
-    { value: 'Salubritate', icon: '🗑️' }, { value: 'Zgomot/Poluare', icon: '🔊' },
-    { value: 'Vandalism', icon: '🚧' }, { value: 'Trafic/Parcare', icon: '🚗' },
-    { value: 'Altele', icon: '📋' },
+    { value: 'Infrastructură', icon: 'INF' }, { value: 'Iluminat', icon: 'ILM' },
+    { value: 'Apă/Canal', icon: 'APA' }, { value: 'Spații verzi', icon: 'SPV' },
+    { value: 'Salubritate', icon: 'SAL' }, { value: 'Zgomot/Poluare', icon: 'ZGP' },
+    { value: 'Vandalism', icon: 'VAN' }, { value: 'Trafic/Parcare', icon: 'TRF' },
+    { value: 'Altele', icon: 'ALT' },
 ];
+const CATEGORY_CODE_MAP = {
+    INF: 'Infrastructură',
+    ILM: 'Iluminat',
+    APA: 'Apă/Canal',
+    SPV: 'Spații verzi',
+    SAL: 'Salubritate',
+    ZGP: 'Zgomot/Poluare',
+    VAN: 'Vandalism',
+    TRF: 'Trafic/Parcare',
+    ALT: 'Altele',
+};
 const PRIORITY_LEVELS = ['Scăzută', 'Medie', 'Ridicată', 'Urgentă'];
 const GALATI_CENTER = [45.4353, 28.0080];
+
+const normalizeCategory = (category) => {
+    if (!category) return 'Altele';
+    const compact = category.replace(/\s+/g, '').toUpperCase();
+    return CATEGORY_CODE_MAP[compact] || category;
+};
 
 const MOCK_ISSUES = [
     { id: 1, title: 'Groapă adâncă pe str. Brăilei', description: 'Groapă periculoasă de aproximativ 40cm, risc de accident pentru pietoni și mașini.', category: 'Infrastructură', priority: 'Urgentă', status: 'În lucru', lat: 45.4420, lng: 28.0250, votes: 34, created_at: '2026-01-15T10:00:00Z', admin_reply: 'Echipa de drumuri a preluat sesizarea. Intervenție planificată.' },
@@ -140,7 +157,7 @@ const Home = () => {
         if (votedIssues.has(id)) { showToast('Ai votat deja această sesizare.', 'error'); return; }
         try {
             await voteIssue(id);
-            showToast('Vot înregistrat! ✓', 'success');
+            showToast('Vot înregistrat!', 'success');
         } catch { showToast('Ai votat deja.', 'error'); }
     };
 
@@ -152,7 +169,7 @@ const Home = () => {
             showToast('Ai încetat să urmărești sesizarea.', 'info');
         } else {
             setFollowedIssues(prev => new Set([...prev, id]));
-            showToast('Urmărești sesizarea! Vei fi notificat. 🔔', 'success');
+            showToast('Urmărești sesizarea! Vei fi notificat.', 'success');
         }
     };
 
@@ -226,7 +243,7 @@ const Home = () => {
             }
             setNewLocation(null);
             resetForm({ title: '', description: '', category: 'Infrastructură', priority: 'Medie', lat: null, lng: null });
-            showToast('Sesizare trimisă! ✓', 'success');
+            showToast('Sesizare trimisă!', 'success');
         } catch { showToast('Eroare la trimitere.', 'error'); }
         finally { setSubmitting(false); }
     };
@@ -234,7 +251,7 @@ const Home = () => {
     const filteredIssues = issues
         .filter(i => {
             const ms = filter === 'Toate' || i.status === filter;
-            const mc = catFilter === 'Toate' || i.category === catFilter;
+            const mc = catFilter === 'Toate' || normalizeCategory(i.category) === catFilter;
             const mq = !search || i.title?.toLowerCase().includes(search.toLowerCase()) || i.description?.toLowerCase().includes(search.toLowerCase());
             return ms && mc && mq;
         })
@@ -261,10 +278,10 @@ const Home = () => {
                 <div className={m('modal-box')} onClick={e => e.stopPropagation()}>
                     <div className={m('modal-header')}>
                         <div className={m('modal-header-left')}>
-                            <div className={m('modal-category-icon')}>{CATEGORIES.find(c => c.value === issue.category)?.icon || '📋'}</div>
+                            <div className={m('modal-category-icon')}>{CATEGORIES.find(c => c.value === normalizeCategory(issue.category))?.icon || '📋'}</div>
                             <div>
                                 <div className={m('modal-title')}>{issue.title}</div>
-                                <div className={m('modal-sub')}>{issue.category} · #{issue.id}</div>
+                                <div className={m('modal-sub')}>{normalizeCategory(issue.category)} · #{issue.id}</div>
                             </div>
                         </div>
                         <button className={m('modal-close')} onClick={() => setSelectedIssue(null)}>✕</button>
@@ -277,13 +294,13 @@ const Home = () => {
                         <p className={m('modal-desc')}>{issue.description}</p>
                         {lat && lng && (
                             <div className={m('modal-location')}>
-                                📍 {parseFloat(lat).toFixed(5)}, {parseFloat(lng).toFixed(5)}
+                                {parseFloat(lat).toFixed(5)}, {parseFloat(lng).toFixed(5)}
                                 <a href={`https://www.google.com/maps?q=${lat},${lng}`} target="_blank" rel="noreferrer" className={m('maps-link')}>Deschide în Maps →</a>
                             </div>
                         )}
                         {issue.admin_reply && (
                             <div className={m('admin-reply-box')}>
-                                <div className={m('reply-label')}>🏛️ Răspuns oficial Primăria Galați</div>
+                                <div className={m('reply-label')}>Răspuns oficial Primăria Galați</div>
                                 <p>{issue.admin_reply}</p>
                             </div>
                         )}
@@ -291,16 +308,16 @@ const Home = () => {
                             <div className={m('tl-item')}><div className={m('tl-dot dot-blue')} /><div><div className={m('tl-text')}>Sesizare înregistrată</div><div className={m('tl-time')}>{issue.created_at ? new Date(issue.created_at).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}</div></div></div>
                             {(issue.status === 'În lucru' || issue.status === 'În verificare' || issue.status === 'Rezolvat') && (<div className={m('tl-item')}><div className={m('tl-dot dot-amber')} /><div><div className={m('tl-text')}>Preluată de departament</div><div className={m('tl-time')}>În curs de procesare</div></div></div>)}
                             {issue.status === 'În verificare' && (<div className={m('tl-item')}><div className={m('tl-dot dot-blue')} /><div><div className={m('tl-text')}>În verificare finală</div><div className={m('tl-time')}>Verificare calitate</div></div></div>)}
-                            {issue.status === 'Rezolvat' && (<div className={m('tl-item')}><div className={m('tl-dot dot-green')} /><div><div className={m('tl-text')}>Problemă rezolvată ✓</div><div className={m('tl-time')}>Lucrare finalizată</div></div></div>)}
+                            {issue.status === 'Rezolvat' && (<div className={m('tl-item')}><div className={m('tl-dot dot-green')} /><div><div className={m('tl-text')}>Problemă rezolvată</div><div className={m('tl-time')}>Lucrare finalizată</div></div></div>)}
                         </div>
                         <div className={m('modal-actions')}>
-                            <button className={m(`btn-action ${isVoted ? 'btn-action-active-blue' : ''}`)} onClick={() => handleVote(issue.id)}>▲ Susțin <span className={m('action-count')}>({issue.votes || 0})</span></button>
+                            <button className={m(`btn-action ${isVoted ? 'btn-action-active-blue' : ''}`)} onClick={() => handleVote(issue.id)}>Susțin <span className={m('action-count')}>({issue.votes || 0})</span></button>
                             <button className={m(`btn-action ${isFollowed ? 'btn-action-active-green' : ''}`)} onClick={() => handleFollow(issue.id)}>👁 {isFollowed ? 'Urmăresc' : 'Urmăresc'}</button>
-                            <button className={m(`btn-action ${isFlagged ? 'btn-action-active-red' : 'btn-action-danger'}`)} onClick={() => handleFlag(issue.id)} disabled={isFlagged}>🚩 {isFlagged ? 'Raportat' : 'Raportez'}</button>
+                            <button className={m(`btn-action ${isFlagged ? 'btn-action-active-red' : 'btn-action-danger'}`)} onClick={() => handleFlag(issue.id)} disabled={isFlagged}>{isFlagged ? 'Raportat' : 'Raportez'}</button>
                         </div>
                         {isAdmin && (
                             <div className={m('admin-actions-modal')}>
-                                <div className={m('admin-label')}>⚙️ Panou Administrator</div>
+                                <div className={m('admin-label')}>Panou Administrator</div>
                                 <div className={m('admin-row')}>
                                     <div className={m('admin-field')}>
                                         <label className={m('admin-field-label')}>Status</label>
@@ -314,13 +331,13 @@ const Home = () => {
                                     </div>
                                 </div>
                                 <button className={m('btn-reply-toggle')} onClick={() => setShowReplyBox(showReplyBox === issue.id ? null : issue.id)}>
-                                    {showReplyBox === issue.id ? '✕ Anulează' : '💬 Trimite răspuns oficial'}
+                                    {showReplyBox === issue.id ? 'Anulează' : 'Trimite răspuns oficial'}
                                 </button>
                                 {showReplyBox === issue.id && (
                                     <div className={m('reply-form')}>
                                         <textarea className={m('reply-textarea')} placeholder="Scrie răspunsul oficial..." value={adminReply} onChange={e => setAdminReply(e.target.value)} rows={4} />
                                         <div className={m('reply-form-btns')}>
-                                            <button className={m('btn-primary-sm')} onClick={() => sendAdminReply(issue.id)}>📤 Publică</button>
+                                            <button className={m('btn-primary-sm')} onClick={() => sendAdminReply(issue.id)}>Publică</button>
                                             <button className={m('btn-cancel-sm')} onClick={() => { setShowReplyBox(null); setAdminReply(''); }}>Anulează</button>
                                         </div>
                                     </div>
@@ -355,12 +372,12 @@ const Home = () => {
                 <div className={m('hero-inner')}>
                     <div className={m('hero-eyebrow')}>
                         <span className={m('eyebrow-dot')} />
-                        Municipiul Galați · Platformă Civică Digitală
+                        Municipiul Galați · Sesizări publice
                     </div>
-                    <h1 className={m('gradient-text')}>Galațiul tău,<br />vocea ta.</h1>
+                    <h1 className={m('gradient-text')}>Semnalează simplu.<br />Urmărește transparent.</h1>
                     <p className={m('hero-sub')}>
-                        Raportează probleme urbane direct pe hartă, susține sesizările
-                        vecinilor și urmărește rezolvarea lor în timp real.
+                        O hartă comună pentru probleme reale din oraș: vezi ce s-a raportat,
+                        adaugă sesizarea ta și urmărește statusul până la rezolvare.
                     </p>
                 </div>
                 {/* Mini stats animate în hero */}
@@ -388,7 +405,7 @@ const Home = () => {
                 <StatCard value={isLoading ? '...' : resolvedCount} label="Rezolvate" icon="✅" color="#10b981" delay={80} trend={8} />
                 <StatCard value={isLoading ? '...' : issues.filter(i => i.status === 'În lucru').length} label="În lucru" icon="⚙️" color="#f59e0b" delay={160} />
                 <StatCard value={isLoading ? '...' : issues.filter(i => i.status === 'Nou').length} label="Noi" icon="🆕" color="#ef4444" delay={240} />
-                <StatCard value={isLoading ? '...' : issues.reduce((s, i) => s + (i.votes || 0), 0)} label="Voturi totale" icon="▲" color="#a855f7" delay={320} trend={25} />
+                <StatCard value={isLoading ? '...' : issues.reduce((s, i) => s + (i.votes || 0), 0)} label="Voturi totale" icon="🗳️" color="#a855f7" delay={320} trend={25} />
             </section>
 
             {/* ── CATEGORII RAPIDE ── */}
@@ -396,7 +413,7 @@ const Home = () => {
                 <h3 className={m('quick-cats-title')}>Filtrează după Categorie</h3>
                 <div className={m('quick-cats-grid')}>
                     {CATEGORIES.map(cat => {
-                        const count = issues.filter(i => i.category === cat.value).length;
+                        const count = issues.filter(i => normalizeCategory(i.category) === cat.value).length;
                         return (
                             <button
                                 key={cat.value}
@@ -417,8 +434,8 @@ const Home = () => {
                 <div className={m('progress-card')}>
                     <div className={m('progress-header')}>
                         <div>
-                            <h3>Progres lunar de rezolvare</h3>
-                            <p>Rata de rezolvare a sesizărilor în Galați</p>
+                            <h3>Status sesizări</h3>
+                            <p>Distribuția curentă a sesizărilor raportate</p>
                         </div>
                         <div className={m('progress-pct')} style={{ color: resolveRate > 50 ? '#10b981' : '#f59e0b' }}>
                             {resolveRate}%
@@ -456,7 +473,7 @@ const Home = () => {
                 {/* Top votate */}
                 <div className={m('top-voted-card')}>
                     <div className={m('tv-header')}>
-                        <h3>🏆 Top sesizări votate</h3>
+                        <h3>Top sesizări votate</h3>
                         <span>Cele mai susținute de comunitate</span>
                     </div>
                     <div className={m('tv-list')}>
@@ -468,12 +485,12 @@ const Home = () => {
                                 <div className={m('tv-content')}>
                                     <div className={m('tv-title')}>{issue.title}</div>
                                     <div className={m('tv-meta')}>
-                                        <span>{issue.category}</span>
+                                        <span>{normalizeCategory(issue.category)}</span>
                                         <StatusBadge status={issue.status} />
                                     </div>
                                 </div>
                                 <div className={m('tv-votes')}>
-                                    <span className={m('tv-vote-num')}>▲ {issue.votes || 0}</span>
+                                    <span className={m('tv-vote-num')}>Voturi: {issue.votes || 0}</span>
                                 </div>
                             </div>
                         ))}
@@ -485,7 +502,7 @@ const Home = () => {
             <section className={m('map-list-section')} id="map-section">
                 <div className={m(`map-card ${activeView === 'list' ? 'map-card-hidden' : ''}`)}>
                     {!user && (
-                        <div className={m('map-hint map-hint-guest')}>🔒 <a href="/login">Loghează-te</a> pentru a adăuga sesizări</div>
+                        <div className={m('map-hint map-hint-guest')}><a href="/login">Loghează-te</a> pentru a adăuga sesizări</div>
                     )}
                     <BaseMap center={GALATI_CENTER} zoom={13} style={{ height: '600px', width: '100%' }}>
                         <LocationPickerLayer
@@ -497,7 +514,7 @@ const Home = () => {
                             }}
                             renderPopup={() => (
                                 <form onSubmit={handleAddIssue} className={m('map-form')}>
-                                    <h4 className={m('map-form-title')}>🚨 Raportează problema</h4>
+                                    <h4 className={m('map-form-title')}>Raportează problema</h4>
                                     <input type="text" placeholder="Titlu sesizare *" required className={m('map-input')} value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} maxLength={100} />
                                     <textarea placeholder="Descriere *" required className={m('map-input')} rows={3} value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} maxLength={500} />
                                     <select className={m('map-input')} value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
@@ -507,7 +524,7 @@ const Home = () => {
                                         {PRIORITY_LEVELS.map(p => <option key={p} value={p}>{p}</option>)}
                                     </select>
                                     <div className={m('map-form-btns')}>
-                                        <button type="submit" className={m('btn-map-submit')} disabled={submitting}>{submitting ? '⏳ Se trimite...' : '📤 Trimite'}</button>
+                                        <button type="submit" className={m('btn-map-submit')} disabled={submitting}>{submitting ? 'Se trimite...' : 'Trimite'}</button>
                                         <button type="button" className={m('btn-map-cancel')} onClick={() => setNewLocation(null)}>Anulează</button>
                                     </div>
                                 </form>
@@ -539,29 +556,29 @@ const Home = () => {
                         {isLoading ? Array(4).fill(0).map((_, i) => <SkeletonRow key={i} />) :
                             filteredIssues.length === 0 ? (
                                 <div className={m('empty-state')}>
-                                    <div className={m('empty-icon')}>📭</div>
+                                    <div className={m('empty-icon')}>—</div>
                                     <p>Nicio sesizare găsită</p>
                                     <span>Încearcă să schimbi filtrele</span>
                                 </div>
                             ) : filteredIssues.map(issue => (
                                 <div key={issue.id} className={m('issue-row')} onClick={() => setSelectedIssue(issue)}>
                                     <div className={m('issue-row-top')}>
-                                        <span className={m('issue-cat-icon')}>{CATEGORIES.find(c => c.value === issue.category)?.icon || '📋'}</span>
+                                        <span className={m('issue-cat-icon')}>{CATEGORIES.find(c => c.value === normalizeCategory(issue.category))?.icon || '📋'}</span>
                                         <div className={m('issue-row-content')}>
                                             <div className={m('issue-row-title-line')}>
                                                 <span className={m('issue-row-title')}>{issue.title}</span>
                                                 <StatusBadge status={issue.status} />
                                             </div>
                                             <div className={m('issue-row-sub')}>
-                                                {issue.category && <span className={m('issue-cat')}>{issue.category}</span>}
+                                                {issue.category && <span className={m('issue-cat')}>{normalizeCategory(issue.category)}</span>}
                                                 {issue.priority && <PriorityDot priority={issue.priority} />}
                                                 <span className={m('issue-date')}>{issue.created_at ? new Date(issue.created_at).toLocaleDateString('ro-RO') : ''}</span>
                                             </div>
                                             <p className={m('issue-row-desc')}>{issue.description?.substring(0, 85)}{issue.description?.length > 85 ? '...' : ''}</p>
                                             <div className={m('issue-row-actions')} onClick={e => e.stopPropagation()}>
-                                                <button className={m(`vote-btn ${votedIssues.has(issue.id) ? 'voted' : ''}`)} onClick={e => handleVote(issue.id, e)}>▲ {issue.votes || 0}</button>
+                                                <button className={m(`vote-btn ${votedIssues.has(issue.id) ? 'voted' : ''}`)} onClick={e => handleVote(issue.id, e)}>Voturi {issue.votes || 0}</button>
                                                 <button className={m(`follow-btn ${followedIssues.has(issue.id) ? 'followed' : ''}`)} onClick={e => handleFollow(issue.id, e)}>👁 Urmăresc</button>
-                                                <button className={m(`flag-btn ${flaggedIssues.has(issue.id) ? 'flagged' : ''}`)} onClick={e => handleFlag(issue.id, e)} disabled={flaggedIssues.has(issue.id)}>🚩</button>
+                                                <button className={m(`flag-btn ${flaggedIssues.has(issue.id) ? 'flagged' : ''}`)} onClick={e => handleFlag(issue.id, e)} disabled={flaggedIssues.has(issue.id)}>Raport</button>
                                                 {isAdmin && (
                                                     <select value={issue.status} onChange={e => updateStatus(issue.id, e.target.value, e)} className={m('admin-select-inline')} onClick={e => e.stopPropagation()}>
                                                         <option>Nou</option><option>În lucru</option><option>În verificare</option><option>Rezolvat</option>
@@ -581,7 +598,7 @@ const Home = () => {
                 <div className={m('activity-card')}>
                     <div className={m('activity-header')}>
                         <div>
-                            <h2>🕐 Activitate recentă</h2>
+                            <h2>Activitate recentă</h2>
                             <p>Ultimele sesizări adăugate în Galați</p>
                         </div>
                     </div>
@@ -590,13 +607,13 @@ const Home = () => {
                             <div key={issue.id} className={m('activity-item')} onClick={() => setSelectedIssue(issue)} style={{ animationDelay: `${i * 80}ms` }}>
                                 <div className={m('activity-timeline-dot')} style={{ background: issue.priority === 'Urgentă' ? '#ef4444' : issue.priority === 'Ridicată' ? '#f97316' : '#3b82f6' }} />
                                 <div className={m('activity-content')}>
-                                    <div className={m('activity-title')}>{CATEGORIES.find(c => c.value === issue.category)?.icon} {issue.title}</div>
+                                    <div className={m('activity-title')}>{CATEGORIES.find(c => c.value === normalizeCategory(issue.category))?.icon} {issue.title}</div>
                                     <div className={m('activity-meta')}>
                                         <StatusBadge status={issue.status} />
                                         <span className={m('activity-time')}>
                                             {issue.created_at ? new Date(issue.created_at).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' }) : ''}
                                         </span>
-                                        <span className={m('activity-votes')}>▲ {issue.votes || 0}</span>
+                                        <span className={m('activity-votes')}>Voturi: {issue.votes || 0}</span>
                                     </div>
                                 </div>
                             </div>
@@ -606,10 +623,10 @@ const Home = () => {
 
                 {/* Hartă mini categorii */}
                 <div className={m('cat-stats-card')}>
-                    <div className={m('cs-header')}><h3>📊 Sesizări pe categorie</h3></div>
+                    <div className={m('cs-header')}><h3>Sesizări pe categorie</h3></div>
                     <div className={m('cs-list')}>
                         {CATEGORIES.map(cat => {
-                            const count = issues.filter(i => i.category === cat.value).length;
+                            const count = issues.filter(i => normalizeCategory(i.category) === cat.value).length;
                             const pct = issues.length ? (count / issues.length) * 100 : 0;
                             return (
                                 <div key={cat.value} className={m('cs-item')} onClick={() => setCatFilter(cat.value)}>
@@ -629,17 +646,17 @@ const Home = () => {
             {/* ── CUM FUNCȚIONEAZĂ ── */}
             <section className={m('how-section')}>
                 <div className={m('how-header')}>
-                    <h2 className={m('section-title')}>Cum Funcționează</h2>
+                    <h2 className={m('section-title')}>Cum funcționează</h2>
                     <p className={m('how-subtitle')}>
-                        Raportezi în mai puțin de 1 minut, iar sesizarea ajunge direct la departamentul potrivit.
+                        Patru pași clari: localizezi, descrii, trimiți, urmărești.
                     </p>
                 </div>
                 <div className={m('how-grid')}>
                     {[
-                        { num: '01', icon: '📍', title: 'Identifici problema', desc: 'Dai click pe hartă exact unde se află problema — groapă, felinar stricat, deșeuri ilegale.' },
-                        { num: '02', icon: '📝', title: 'Completezi sesizarea', desc: 'Adaugi titlu, descriere și selectezi categoria și prioritatea problemei.' },
-                        { num: '03', icon: '🏛️', title: 'Primăria preia sesizarea', desc: 'Sesizarea ajunge direct la departamentul responsabil care o analizează și alocă resurse.' },
-                        { num: '04', icon: '✅', title: 'Urmărești rezolvarea', desc: 'Primești notificări la fiecare actualizare de status până la rezolvarea completă.' },
+                        { num: '01', icon: '1', title: 'Identifici problema', desc: 'Dai click pe hartă exact unde se află problema — groapă, felinar stricat, deșeuri ilegale.' },
+                        { num: '02', icon: '2', title: 'Completezi sesizarea', desc: 'Adaugi titlu, descriere și selectezi categoria și prioritatea problemei.' },
+                        { num: '03', icon: '3', title: 'Primăria preia sesizarea', desc: 'Sesizarea ajunge direct la departamentul responsabil care o analizează și alocă resurse.' },
+                        { num: '04', icon: '4', title: 'Urmărești rezolvarea', desc: 'Primești notificări la fiecare actualizare de status până la rezolvarea completă.' },
                     ].map((step, index, steps) => (
                         <div key={step.num} className={m('how-step')}>
                             <div className={m('how-step-top')}>
@@ -659,16 +676,16 @@ const Home = () => {
                 <div className={m('cta-inner')}>
                     <div className={m('cta-bg-glow')} />
                     <div className={m('cta-content')}>
-                        <h2>Fii parte din schimbare</h2>
-                        <p>Alătură-te celor care contribuie activ la îmbunătățirea Galațiului.</p>
+                        <h2>Ai observat o problemă?</h2>
+                        <p>Raporteaz-o aici. Toată comunitatea vede progresul.</p>
                         {!user ? (
                             <div className={m('cta-btns')}>
-                                <a href="/login" className={m('btn-primary')} style={{ textDecoration: 'none' }}>🚀 Creează cont gratuit</a>
-                                <a href="#map-section" className={m('btn-secondary')} style={{ textDecoration: 'none' }}>📍 Explorează harta</a>
+                                <a href="/login" className={m('btn-primary')} style={{ textDecoration: 'none' }}>Creează cont gratuit</a>
+                                <a href="#map-section" className={m('btn-secondary')} style={{ textDecoration: 'none' }}>Explorează harta</a>
                             </div>
                         ) : (
                             <div className={m('cta-btns')}>
-                                <a href="#map-section" className={m('btn-primary')} style={{ textDecoration: 'none' }}>✚ Raportează o problemă</a>
+                                <a href="#map-section" className={m('btn-primary')} style={{ textDecoration: 'none' }}>Raportează o problemă</a>
                             </div>
                         )}
                     </div>
@@ -680,12 +697,12 @@ const Home = () => {
                 <h2 className={m('section-title')}>Întrebări Frecvente</h2>
                 <div className={m('faq-grid')}>
                     {[
-                        { q: 'Cum funcționează votul?', a: 'Sesizările cu cele mai multe voturi sunt prioritizate. Fiecare utilizator autentificat poate susține o sesizare o singură dată.' },
-                        { q: 'Pot urmări stadiul rezolvării?', a: 'Da! Apasă „Urmăresc" pe orice sesizare și vei primi notificări la fiecare schimbare de status.' },
-                        { q: 'Ce se întâmplă cu sesizările duplicate?', a: 'Poți raporta o sesizare ca incorectă sau duplicat. Administratorii o vor analiza și redirecționa.' },
-                        { q: 'Cât durează rezolvarea?', a: 'Variază în funcție de tip și prioritate. Sesizările urgente sunt tratate prioritar. Termenul mediu este 5-7 zile.' },
-                        { q: 'Datele mele sunt în siguranță?', a: 'Da. Folosim criptare și nu partajăm datele personale cu terți. Identitatea poate fi anonimizată.' },
-                        { q: 'Cine poate vedea sesizările?', a: 'Toate sesizările sunt publice pe hartă. Datele de contact sunt vizibile doar pentru administratori.' },
+                        { q: 'Cum funcționează votul?', a: 'Fiecare utilizator autentificat poate vota o singură dată fiecare sesizare.' },
+                        { q: 'Pot urmări stadiul rezolvării?', a: 'Da. Apasă „Urmăresc” pentru a primi actualizări la schimbarea statusului.' },
+                        { q: 'Ce fac dacă există deja aceeași problemă?', a: 'Poți vota sesizarea existentă sau o poți raporta ca duplicat.' },
+                        { q: 'Cât durează rezolvarea?', a: 'Depinde de tipul problemei și de complexitate. Statusul este actualizat pe parcurs.' },
+                        { q: 'Datele mele sunt în siguranță?', a: 'Datele de contact nu sunt afișate public. Sesizările rămân vizibile pe hartă.' },
+                        { q: 'Cine vede sesizările?', a: 'Oricine poate vedea harta. Doar administratorii gestionează fluxul intern.' },
                     ].map((item, i) => (
                         <details key={i} className={m('faq-item')}>
                             <summary>{item.q}</summary>
@@ -700,11 +717,11 @@ const Home = () => {
                 <div className={m('footer-inner')}>
                     <div className={m('footer-brand')}>
                         <span className={m('footer-logo')}>Galați<span>Civic</span></span>
-                        <p>Platforma civică oficială a Municipiului Galați</p>
+                        <p>Platformă publică pentru sesizări civice în Municipiul Galați</p>
                         <div className={m('footer-badges')}>
-                            <span>🔐 Date protejate</span>
-                            <span>📍 Sesizări geolocalizate</span>
-                            <span>⚡ Răspuns rapid</span>
+                            <span>Date protejate</span>
+                            <span>Sesizări geolocalizate</span>
+                            <span>Răspuns rapid</span>
                         </div>
                     </div>
                     <div className={m('footer-columns')}>
@@ -723,8 +740,8 @@ const Home = () => {
                     </div>
                 </div>
                 <div className={m('footer-bottom')}>
-                    <p>© 2026 Galați Civic · Vocea ta contează în orașul nostru.</p>
-                    <p className={m('footer-made-with')}>Construit pentru o comunitate mai curată, sigură și conectată.</p>
+                    <p>© 2026 Galați Civic</p>
+                    <p className={m('footer-made-with')}>Un loc comun pentru semnalări și urmărirea rezolvării lor.</p>
                 </div>
             </footer>
 
