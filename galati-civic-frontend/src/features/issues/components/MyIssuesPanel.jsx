@@ -1,19 +1,7 @@
 import React from 'react';
 
-const MyIssuesPanel = ({
-    isLoading,
-    myIssues,
-    onSelectIssue,
-    onStartNew,
-    onVote,
-    votedIssues,
-    onEdit,
-    onDelete,
-    categories,
-    priorities,
-    StatusBadge,
-}) => {
-    if (isLoading) {
+const MyIssuesPanel = (props) => {
+    if (props.isLoading) {
         return (
             <div className="ci-loading">
                 <div className="ci-spinner" />
@@ -22,13 +10,13 @@ const MyIssuesPanel = ({
         );
     }
 
-    if (myIssues.length === 0) {
+    if (props.myIssues.length === 0) {
         return (
             <div className="ci-empty">
                 <div className="ci-empty-icon">📭</div>
                 <h3>Nu ai sesizări încă</h3>
                 <p>Fii primul care semnalează o problemă în cartierul tău!</p>
-                <button className="ci-btn-primary" onClick={onStartNew}>
+                <button className="ci-btn-primary" onClick={props.onStartNew}>
                     ✚ Adaugă prima sesizare
                 </button>
             </div>
@@ -38,25 +26,25 @@ const MyIssuesPanel = ({
     return (
         <>
             <div className="ci-my-header">
-                <h2>Sesizările tale ({myIssues.length})</h2>
-                <button className="ci-btn-primary ci-btn-sm" onClick={onStartNew}>
+                <h2>Sesizările tale ({props.myIssues.length})</h2>
+                <button className="ci-btn-primary ci-btn-sm" onClick={props.onStartNew}>
                     ✚ Sesizare nouă
                 </button>
             </div>
             <div className="ci-my-grid">
-                {myIssues.map((issue) => (
-                    <div key={issue.id} className="ci-issue-card" onClick={() => onSelectIssue(issue)}>
+                {props.myIssues.map((issue) => (
+                    <div key={issue.id} className="ci-issue-card" onClick={() => props.onSelectIssue(issue)}>
                         <div className="ci-ic-top">
                             <div className="ci-ic-cat">
-                                {categories.find((c) => c.value === issue.category)?.label?.split(' ')[0] || '📋'}
+                                {props.categories.find((c) => c.value === issue.category)?.label?.split(' ')[0] || '📋'}
                             </div>
-                            <StatusBadge status={issue.status} />
+                            <props.StatusBadge status={issue.status} />
                         </div>
                         <h3 className="ci-ic-title">{issue.title}</h3>
                         <p className="ci-ic-desc">{issue.description?.substring(0, 90)}{issue.description?.length > 90 ? '...' : ''}</p>
                         <div className="ci-ic-meta">
                             <span className="ci-ic-cat-label">{issue.category}</span>
-                            <span className="ci-ic-priority" style={{ color: priorities.find((p) => p.value === issue.priority)?.color || '#94a3b8' }}>
+                            <span className="ci-ic-priority" style={{ color: props.priorities.find((p) => p.value === issue.priority)?.color || '#94a3b8' }}>
                                 ● {issue.priority}
                             </span>
                             <span className="ci-ic-date">
@@ -65,8 +53,8 @@ const MyIssuesPanel = ({
                         </div>
                         <div className="ci-ic-footer" onClick={(e) => e.stopPropagation()}>
                             <button
-                                className={`ci-vote-btn ${votedIssues.has(issue.id) ? 'voted' : ''}`}
-                                onClick={(e) => onVote(issue.id, e)}
+                                className={`ci-vote-btn ${props.votedIssues.has(issue.id) ? 'voted' : ''}`}
+                                onClick={(e) => props.onVote(issue.id, e)}
                                 title="Susțin sesizarea"
                             >
                                 ▲ {issue.votes || 0} voturi
@@ -76,7 +64,7 @@ const MyIssuesPanel = ({
                                     className="ci-action-btn ci-edit-btn"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        onEdit(issue);
+                                        props.onEdit(issue);
                                     }}
                                     title="Editează sesizarea"
                                 >
@@ -86,7 +74,7 @@ const MyIssuesPanel = ({
                                     className="ci-action-btn ci-delete-btn"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        onDelete(issue.id);
+                                        props.onDelete(issue.id);
                                     }}
                                     title="Șterge sesizarea"
                                 >
