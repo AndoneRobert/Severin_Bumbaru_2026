@@ -68,6 +68,7 @@ export const useIssues = ({
     apiClient = defaultApiClient,
     user,
     getToken,
+    apiUrl = (import.meta.env.VITE_API_URL || 'https://severin-bumbaru-2026.onrender.com/api').replace(/\/+$/, ''),
     useMock = false,
     mockIssues = [],
     loadMyIssues = false,
