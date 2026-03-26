@@ -1,19 +1,43 @@
-# React + Vite
+# Galați Civic Frontend (React + Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Development
 
-Currently, two official plugins are available:
+```bash
+npm install
+npm run dev
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Smoke validation in development mode
 
-## React Compiler
+Use this lightweight smoke check after frontend/backend fixes without introducing a test framework.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Run
+```bash
+./scripts/smoke-frontend-dev.sh
+```
 
-## Expanding the ESLint configuration
+### What is validated
+1. Vite dev server starts.
+2. Main routes return the SPA shell in dev mode:
+   - `/`
+   - `/dashboard`
+   - `/my-issues`
+   - `/login`
+   - `/admin`
+3. Issue-list API path is reachable at `FRONTEND_API_URL/issues` (defaults to `http://127.0.0.1:5050/api/issues`).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Pass / fail expectations
+- **PASS**: Script prints per-route checks and ends with `Frontend smoke checks passed`.
+- **FAIL**: Script exits non-zero and prints useful response/log output.
+
+### Common failure diagnostics
+- Dev server never starts: run `npm install` and inspect `.smoke-frontend.log`.
+- Route check fails: ensure Vite is serving on the requested port and no proxy is intercepting.
+- API check fails: start backend smoke first or set a reachable API base.
+
+### Useful overrides
+- `FRONTEND_SMOKE_PORT=4175 ./scripts/smoke-frontend-dev.sh`
+- `FRONTEND_API_URL=https://example.com/api ./scripts/smoke-frontend-dev.sh`
 
 ## Table API helper
 
