@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { pageStyles } from './createIssueStyles';
 import IssueTabs from './components/IssueTabs';
@@ -9,6 +8,7 @@ import NewIssueStepper from './components/NewIssueStepper';
 import IssuesMapPanel from './components/IssuesMapPanel';
 import IssueEditModal from './components/IssueEditModal';
 import IssueDeleteConfirm from './components/IssueDeleteConfirm';
+import { createIssue, deleteIssue, getAllIssues, getMyIssues, updateIssue, voteIssue } from '../../services/issuesApi';
 
 import { SELECTED_ICON } from '../map/utils/mapIcons';
 const GALATI_CENTER = [45.4353, 28.008];
@@ -63,7 +63,6 @@ const CreateIssueContainer = () => {
 
     const { user, getToken } = useAuth();
     const navigate = useNavigate();
-    const apiUrl = (import.meta.env.VITE_API_URL || 'https://severin-bumbaru-2026.onrender.com/api').replace(/\/+$/, '');
     const useMock = import.meta.env.VITE_USE_MOCK === 'true';
 
     const showToast = useCallback((msg, type = 'info') => {
@@ -80,12 +79,12 @@ const CreateIssueContainer = () => {
                 setAllIssues([...MOCK_MY_ISSUES]);
             } else {
                 try {
-                    const [myRes, allRes] = await Promise.all([
-                        axios.get(`${apiUrl}/issues/my`, { headers: { Authorization: `Bearer ${user?.token}` } }),
-                        axios.get(`${apiUrl}/issues`),
+                    const [myData, allData] = await Promise.all([
+                        getMyIssues(user?.token),
+                        getAllIssues(),
                     ]);
-                    setMyIssues(myRes.data);
-                    setAllIssues(allRes.data);
+                    setMyIssues(myData);
+                    setAllIssues(allData);
                 } catch {
                     showToast('Eroare la încărcare date.', 'error');
                 }
@@ -121,7 +120,7 @@ const CreateIssueContainer = () => {
                 setTab('my');
             } else {
                 const token = (await getToken?.()) || user?.token;
-                await axios.post(`${apiUrl}/issues`, { ...payload, user_id: user?.id ?? null }, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+                await createIssue({ ...payload, user_id: user?.id ?? null }, token);
                 showToast('Sesizare trimisă! ✓', 'success');
                 setTab('my');
             }
@@ -140,7 +139,7 @@ const CreateIssueContainer = () => {
             setMyIssues((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
             setAllIssues((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
         } else {
-            try { await axios.put(`${apiUrl}/issues/${updated.id}`, updated, { headers: { Authorization: `Bearer ${user.token}` } }); } catch { return showToast('Eroare la actualizare.', 'error'); }
+            try { await updateIssue(updated.id, updated, user.token); } catch { return showToast('Eroare la actualizare.', 'error'); }
         }
         showToast('Sesizare actualizată! ✓', 'success');
         setEditingIssue(null);
@@ -152,7 +151,7 @@ const CreateIssueContainer = () => {
             setMyIssues((prev) => prev.filter((i) => i.id !== id));
             setAllIssues((prev) => prev.filter((i) => i.id !== id));
         } else {
-            try { await axios.delete(`${apiUrl}/issues/${id}`, { headers: { Authorization: `Bearer ${user.token}` } }); } catch { return showToast('Eroare la ștergere.', 'error'); }
+            try { await deleteIssue(id, user.token); } catch { return showToast('Eroare la ștergere.', 'error'); }
         }
         showToast('Sesizare ștearsă.', 'success');
         setDeleteConfirm(null);
@@ -168,7 +167,7 @@ const CreateIssueContainer = () => {
             setVotedIssues((prev) => new Set([...prev, id]));
             return showToast('Vot înregistrat! ▲', 'success');
         }
-        try { await axios.post(`${apiUrl}/issues/${id}/vote`, {}, { headers: { Authorization: `Bearer ${user.token}` } }); setVotedIssues((prev) => new Set([...prev, id])); showToast('Vot înregistrat! ▲', 'success'); } catch { showToast('Ai votat deja!', 'error'); }
+        try { await voteIssue(id, user.token); setVotedIssues((prev) => new Set([...prev, id])); showToast('Vot înregistrat! ▲', 'success'); } catch { showToast('Ai votat deja!', 'error'); }
     };
 
     const filteredForMap = allIssues.filter((i) => (mapFilter === 'Toate' || i.status === mapFilter) && (!mapSearch || i.title?.toLowerCase().includes(mapSearch.toLowerCase())) && i.lat && i.lng);
