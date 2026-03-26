@@ -74,6 +74,9 @@
 .btn-secondary, .btn-map-cancel { background: rgba(255,255,255,.03); color: var(--text); border-color: rgba(255,255,255,.15); }
 
 .stats-section { display: grid; gap: 12px; grid-template-columns: repeat(4, minmax(0,1fr)); padding: 0 24px; }
+.quick-cats-section,
+.how-section,
+.faq-section { padding: 0 24px; }
 .stat-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow-card); }
 .stat-icon-wrap { width: 42px; height: 42px; border-radius: 10px; display: grid; place-items: center; margin-bottom: 12px; }
 .stat-value { font-size: 1.8rem; font-weight: 800; line-height: 1; }
@@ -356,7 +359,26 @@
 .qcat-label { font-size: 12px; color: var(--text-dim); }
 .qcat-count { font-size: 12px; padding: 1px 7px; border-radius: 999px; background: rgba(59,130,246,.2); }
 
-.map-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-lg); overflow: hidden; }
+.map-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-lg); overflow: hidden; position: relative; }
+.map-legend {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 4;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(8,15,30,.86);
+  backdrop-filter: blur(6px);
+}
+.legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-dim); }
+.legend-dot { width: 7px; height: 7px; border-radius: 999px; display: inline-block; }
+
+.map-card :global(.leaflet-container) { z-index: 1; }
+.map-card :global(.leaflet-control-container) { z-index: 2; }
 .map-card-hidden { display: none; }
 .map-hint { padding: 10px 12px; font-size: 12px; border-bottom: 1px solid rgba(255,255,255,.08); }
 .map-hint-user { color: #93c5fd; }

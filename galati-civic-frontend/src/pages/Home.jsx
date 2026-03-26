@@ -425,7 +425,7 @@ const Home = () => {
 
             {/* ── CATEGORII RAPIDE ── */}
             <section className={m('quick-cats-section')}>
-                <h3 className={m('quick-cats-title')}>Filtrează după categorie</h3>
+                <h3 className={m('quick-cats-title')}>Filtrează după Categorie</h3>
                 <div className={m('quick-cats-grid')}>
                     {CATEGORIES.map(cat => {
                         const count = issues.filter(i => i.category === cat.value).length;
@@ -709,7 +709,7 @@ const Home = () => {
 
             {/* ── CUM FUNCȚIONEAZĂ ── */}
             <section className={m('how-section')}>
-                <h2 className={m('section-title')}>Cum funcționează?</h2>
+                <h2 className={m('section-title')}>Cum Funcționează</h2>
                 <div className={m('how-grid')}>
                     {[
                         { num: '01', icon: '📍', title: 'Identifici problema', desc: 'Dai click pe hartă exact unde se află problema — groapă, felinar stricat, deșeuri ilegale.' },
@@ -750,7 +750,7 @@ const Home = () => {
 
             {/* ── FAQ ── */}
             <section className={m('faq-section')}>
-                <h2 className={m('section-title')}>Întrebări frecvente</h2>
+                <h2 className={m('section-title')}>Întrebări Frecvente</h2>
                 <div className={m('faq-grid')}>
                     {[
                         { q: 'Cum funcționează votul?', a: 'Sesizările cu cele mai multe voturi sunt prioritizate. Fiecare utilizator autentificat poate susține o sesizare o singură dată.' },
