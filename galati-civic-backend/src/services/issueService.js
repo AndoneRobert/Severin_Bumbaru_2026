@@ -3,14 +3,17 @@ const supabase = require('../config/supabase');
 const issuesTable = process.env.SUPABASE_ISSUES_TABLE || 'issues';
 const issueVotesTable = process.env.SUPABASE_ISSUE_VOTES_TABLE || 'issues_votes';
 const issueCommentsTable = process.env.SUPABASE_ISSUE_COMMENTS_TABLE || 'issues_comments';
+const issueFollowsTable = process.env.SUPABASE_ISSUE_FOLLOWS_TABLE || 'issues_follows';
 
 const ISSUE_TABLE_CANDIDATES = [issuesTable, 'issues', 'rapoarte'];
 const ISSUE_VOTES_TABLE_CANDIDATES = [issueVotesTable, 'issues_votes', 'report_votes'];
 const ISSUE_COMMENTS_TABLE_CANDIDATES = [issueCommentsTable, 'issues_comments', 'report_comments'];
+const ISSUE_FOLLOWS_TABLE_CANDIDATES = [issueFollowsTable, 'issues_follows', 'issue_follows', 'report_follows'];
 
 let resolvedIssuesTable = process.env.SUPABASE_ISSUES_TABLE || null;
 let resolvedIssueVotesTable = process.env.SUPABASE_ISSUE_VOTES_TABLE || null;
 let resolvedIssueCommentsTable = process.env.SUPABASE_ISSUE_COMMENTS_TABLE || null;
+let resolvedIssueFollowsTable = process.env.SUPABASE_ISSUE_FOLLOWS_TABLE || null;
 
 const unique = (items) => [...new Set(items.filter(Boolean))];
 
@@ -64,6 +67,15 @@ const runOnIssueCommentsTable = (operation) => runOnTable(operation, ISSUE_COMME
     },
     set value(next) {
         resolvedIssueCommentsTable = next;
+    },
+});
+
+const runOnIssueFollowsTable = (operation) => runOnTable(operation, ISSUE_FOLLOWS_TABLE_CANDIDATES, {
+    get value() {
+        return resolvedIssueFollowsTable;
+    },
+    set value(next) {
+        resolvedIssueFollowsTable = next;
     },
 });
 
@@ -142,10 +154,39 @@ const voteForIssue = async ({ issueId, userId }, dbClient = supabase) => {
     return updateIssueVotes(issueId, nextVotes, dbClient);
 };
 
+const listFollowedIssueIds = async (userId, dbClient = supabase) => {
+    const { data } = await runOnIssueFollowsTable(async (table) => dbClient
+        .from(table)
+        .select('issue_id')
+        .eq('user_id', userId));
+    return (data || []).map((row) => row.issue_id).filter(Boolean);
+};
+
+const followIssue = async ({ issueId, userId }, dbClient = supabase) => {
+    const { data, error } = await runOnIssueFollowsTable(async (table) => dbClient
+        .from(table)
+        .insert([{ issue_id: issueId, user_id: userId }])
+        .select('issue_id, user_id')
+        .single());
+
+    if (error) throw error;
+    return data;
+};
+
+const unfollowIssue = async ({ issueId, userId }, dbClient = supabase) => {
+    const { count } = await runOnIssueFollowsTable(async (table) => dbClient
+        .from(table)
+        .delete({ count: 'exact' })
+        .eq('issue_id', issueId)
+        .eq('user_id', userId));
+    return count || 0;
+};
+
 module.exports = {
     issuesTable,
     issueVotesTable,
     issueCommentsTable,
+    issueFollowsTable,
     listIssues,
     listIssuesByUser,
     createIssue,
@@ -154,5 +195,9 @@ module.exports = {
     getIssueVotes,
     updateIssueVotes,
     voteForIssue,
+    listFollowedIssueIds,
+    followIssue,
+    unfollowIssue,
     runOnIssueCommentsTable,
+    runOnIssueFollowsTable,
 };

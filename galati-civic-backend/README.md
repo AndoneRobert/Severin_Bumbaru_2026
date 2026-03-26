@@ -28,6 +28,7 @@ SUPABASE_KEY=your_supabase_service_role_key
 SUPABASE_ISSUES_TABLE=issues
 SUPABASE_ISSUE_VOTES_TABLE=issues_votes
 SUPABASE_ISSUE_COMMENTS_TABLE=issues_comments
+SUPABASE_ISSUE_FLAGS_TABLE=issues_flags
 
 # comma-separated origins
 CORS_ORIGIN=http://localhost:5173,https://your-frontend-domain
@@ -67,6 +68,7 @@ Current tables discussed:
 Target model:
 - **Canonical main table:** `issues`
 - **Canonical support tables:** `issues_comments`, `issues_votes`
+- **Canonical moderation tables:** `issues_flags`
 - Legacy tables remain only as migration source (to be deprecated)
 
 ### Why this refactor
@@ -77,6 +79,7 @@ Target model:
 ### Migration included
 This repo now includes:
 - `supabase/migrations/20260326_rename_reports_to_issues_support_tables.sql`
+- `supabase/migrations/20260326_add_issues_flags_table.sql`
 
 It:
 1. Renames `report_comments` -> `issues_comments` and `report_votes` -> `issues_votes` (when present).
@@ -84,12 +87,19 @@ It:
 3. Normalizes `report_id` columns to `issue_id`.
 4. Adds unique vote constraint `(issue_id, user_id)`.
 5. Adds/repairs FK constraints to `issues(id)` and `profiles(id)`.
+6. Creates `issues_flags` with unique `(issue_id, user_id)` for moderation reports.
 
 Apply in Supabase SQL editor (or your migration pipeline) before deploying backend changes.
 
 ## Voting behavior update
 `POST /api/issues/:id/vote` now writes a vote row in `issues_votes` (or legacy fallback `report_votes`) and increments `issues.votes`.
 - Duplicate vote from the same user returns HTTP `409`.
+
+## Issue flag behavior update
+`POST /api/issues/:id/flag` now writes a moderation flag row in `issues_flags`.
+- First flag from a user returns HTTP `201`.
+- Duplicate flag attempt from the same user returns HTTP `409`.
+- Successful responses include dashboard metadata (`total_flags_for_issue`, `total_flags_by_user`, `latest_flagged_at`).
 
 ## Smoke validation (minimal)
 ```bash
@@ -168,4 +178,3 @@ Use this as a quick reference for table/column names when generating queries, AP
 | reports         | created_at  | timestamp with time zone |
 | reports         | updated_at  | timestamp with time zone |
 | reports         | votes_count | integer                  |
-

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 import { useAuth } from '../context/AuthContext';
 import { useIssues } from '../features/issues/hooks/useIssues';
@@ -7,7 +7,13 @@ import { useToast } from '../features/issues/hooks/useToast';
 import L from 'leaflet';
 import styles from './Home.module.css';
 import { apiClient } from '../services/apiClient';
-import { flagIssue, replyIssue } from '../services/issuesApi';
+import {
+    flagIssue,
+    followIssue as followIssueApi,
+    getMyFollowedIssues,
+    replyIssue,
+    unfollowIssue as unfollowIssueApi,
+} from '../services/issuesApi';
 import BaseMap from '../features/map/components/BaseMap';
 import IssueMarkersLayer from '../features/map/components/IssueMarkersLayer';
 import LocationPickerLayer from '../features/map/components/LocationPickerLayer';
@@ -51,6 +57,7 @@ const normalizeCategory = (category) => {
     const compact = category.replace(/\s+/g, '').toUpperCase();
     return CATEGORY_CODE_MAP[compact] || category;
 };
+const toIssueKey = (id) => String(id);
 
 const MOCK_ISSUES = [
     { id: 1, title: 'Groapă adâncă pe str. Brăilei', description: 'Groapă periculoasă de aproximativ 40cm, risc de accident pentru pietoni și mașini.', category: 'Infrastructură', priority: 'Urgentă', status: 'În lucru', lat: 45.4420, lng: 28.0250, votes: 34, created_at: '2026-01-15T10:00:00Z', admin_reply: 'Echipa de drumuri a preluat sesizarea. Intervenție planificată.' },
@@ -119,7 +126,6 @@ const Home = () => {
     const [followedIssues, setFollowedIssues] = useState(new Set());
     const [flaggedIssues, setFlaggedIssues] = useState(new Set());
     const [activeView] = useState('map');
-    const [urgentBannerClosed, setUrgentBannerClosed] = useState(false);
 
     const { user, getToken, isAdmin } = useAuth();
     const useMock = import.meta.env.VITE_USE_MOCK === 'true';
@@ -149,7 +155,38 @@ const Home = () => {
         loadIssues().catch(() => setIssues(MOCK_ISSUES));
     }, [loadIssues, setIssues]);
 
-    const getAuthToken = async () => (await getToken?.()) || user?.token;
+    const getAuthToken = useCallback(async () => (await getToken?.()) || user?.token, [getToken, user?.token]);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadFollowedIssues = async () => {
+            if (!user) {
+                setFollowedIssues(new Set());
+                return;
+            }
+
+            if (useMock) {
+                return;
+            }
+
+            try {
+                const token = await getAuthToken();
+                const issueIds = await getMyFollowedIssues(token);
+                if (!isMounted) return;
+                setFollowedIssues(new Set(issueIds.map((id) => toIssueKey(id))));
+            } catch {
+                if (!isMounted) return;
+                setFollowedIssues(new Set());
+            }
+        };
+
+        loadFollowedIssues();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [user, useMock, getAuthToken]);
 
     const handleVote = async (id, e) => {
         e?.stopPropagation();
@@ -161,15 +198,33 @@ const Home = () => {
         } catch { showToast('Ai votat deja.', 'error'); }
     };
 
-    const handleFollow = (id, e) => {
+    const handleFollow = async (id, e) => {
         e?.stopPropagation();
         if (!user) { showToast('Trebuie să fii logat pentru a urmări!', 'error'); return; }
-        if (followedIssues.has(id)) {
-            setFollowedIssues(prev => { const s = new Set(prev); s.delete(id); return s; });
-            showToast('Ai încetat să urmărești sesizarea.', 'info');
-        } else {
-            setFollowedIssues(prev => new Set([...prev, id]));
-            showToast('Urmărești sesizarea! Vei fi notificat.', 'success');
+        const issueKey = toIssueKey(id);
+
+        try {
+            if (followedIssues.has(issueKey)) {
+                if (!useMock) {
+                    const token = await getAuthToken();
+                    await unfollowIssueApi(id, token);
+                }
+                setFollowedIssues(prev => {
+                    const s = new Set(prev);
+                    s.delete(issueKey);
+                    return s;
+                });
+                showToast('Ai încetat să urmărești sesizarea.', 'info');
+            } else {
+                if (!useMock) {
+                    const token = await getAuthToken();
+                    await followIssueApi(id, token);
+                }
+                setFollowedIssues(prev => new Set([...prev, issueKey]));
+                showToast('Urmărești sesizarea! Vei fi notificat.', 'success');
+            }
+        } catch {
+            showToast('Eroare la actualizarea urmăririi.', 'error');
         }
     };
 
@@ -271,7 +326,7 @@ const Home = () => {
         const lat = issue.lat || issue.latitude;
         const lng = issue.lng || issue.longitude;
         const isVoted = votedIssues.has(issue.id);
-        const isFollowed = followedIssues.has(issue.id);
+        const isFollowed = followedIssues.has(toIssueKey(issue.id));
         const isFlagged = flaggedIssues.has(issue.id);
         return (
             <div className={m('modal-overlay')} onClick={() => setSelectedIssue(null)}>

@@ -5,6 +5,8 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import CreateIssue from './pages/CreateIssue';
 import Privacy from './pages/Privacy';
+import About from './pages/About';
+import Contact from './pages/Contact';
 import { AuthProvider } from './context/AuthContext';
 import './App.css';
 
@@ -25,6 +27,8 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/admin" element={<Dashboard />} />
               <Route path="/privacy" element={<Privacy />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
               {/* <Routes path="/register" element={<Register />} />      */}
             </Routes>
           </main>

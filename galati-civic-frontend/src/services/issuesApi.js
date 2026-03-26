@@ -48,6 +48,23 @@ export const voteIssue = async (id, token) => {
     return normalizeIssueResponse(response.data);
 };
 
+export const getMyFollowedIssues = async (token) => {
+    const response = await apiClient.get('/issues/follows/my', authConfig(token));
+    const payload = resolveData(response.data);
+    if (Array.isArray(payload)) return payload;
+    return Array.isArray(payload?.issue_ids) ? payload.issue_ids : [];
+};
+
+export const followIssue = async (id, token) => {
+    const response = await apiClient.post(`/issues/${id}/follow`, {}, authConfig(token));
+    return resolveData(response.data);
+};
+
+export const unfollowIssue = async (id, token) => {
+    const response = await apiClient.delete(`/issues/${id}/follow`, authConfig(token));
+    return resolveData(response.data);
+};
+
 export const flagIssue = async (id, token) => {
     const response = await apiClient.post(`/issues/${id}/flag`, {}, authConfig(token));
     return resolveData(response.data);
