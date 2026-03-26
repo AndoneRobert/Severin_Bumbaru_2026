@@ -4,6 +4,26 @@ import { getAllIssues, updateIssue, deleteIssue as deleteIssueApi } from '../ser
 
 const CATEGORIES = ['Infrastructură', 'Iluminat', 'Apă/Canal', 'Spații verzi', 'Salubritate', 'Altele'];
 const STATUSES = ['Nou', 'În lucru', 'În verificare', 'Rezolvat'];
+const DEPARTMENTS = [
+    'Direcția Infrastructură Rutieră',
+    'Serviciul Iluminat Public',
+    'Serviciul Apă și Canalizare',
+    'Serviciul Spații Verzi',
+    'Serviciul Salubritate',
+    'Direcția Tehnică Generală',
+];
+
+const getSuggestedDepartment = (category) => {
+    const map = {
+        'Infrastructură': 'Direcția Infrastructură Rutieră',
+        'Iluminat': 'Serviciul Iluminat Public',
+        'Apă/Canal': 'Serviciul Apă și Canalizare',
+        'Spații verzi': 'Serviciul Spații Verzi',
+        'Salubritate': 'Serviciul Salubritate',
+        'Altele': 'Direcția Tehnică Generală',
+    };
+    return map[category] || 'Direcția Tehnică Generală';
+};
 
 const StatusBadge = ({ status }) => {
     const map = {
@@ -34,6 +54,16 @@ export default function Dashboard() {
     const [search, setSearch] = useState('');
     const [sortBy, setSortBy] = useState('date');
     const [toast, setToast] = useState({ msg: '', show: false, type: 'info' });
+    const [editingIssue, setEditingIssue] = useState(null);
+    const [editForm, setEditForm] = useState({
+        title: '',
+        description: '',
+        status: 'Nou',
+        priority: 'Medie',
+        category: '',
+        department: 'Direcția Tehnică Generală',
+        adminMessage: '',
+    });
 
     const { user, isAdmin, getToken } = useAuth();
     const [authToken, setAuthToken] = useState(null);
@@ -102,6 +132,67 @@ export default function Dashboard() {
         }
     };
 
+    const openEditModal = (issue) => {
+        setEditingIssue(issue);
+        setEditForm({
+            title: issue.title || '',
+            description: issue.description || '',
+            status: issue.status || 'Nou',
+            priority: issue.priority || 'Medie',
+            category: issue.category || CATEGORIES[0],
+            department: getSuggestedDepartment(issue.category),
+            adminMessage: issue.admin_reply || '',
+        });
+    };
+
+    const closeEditModal = () => {
+        setEditingIssue(null);
+        setEditForm({
+            title: '',
+            description: '',
+            status: 'Nou',
+            priority: 'Medie',
+            category: '',
+            department: 'Direcția Tehnică Generală',
+            adminMessage: '',
+        });
+    };
+
+    const saveIssueChanges = async (sendToDepartment = false) => {
+        if (!editingIssue) return;
+        if (!isAdmin) {
+            showToast('Doar administratorii pot edita sesizări.', 'error');
+            return;
+        }
+        if (!authToken) {
+            showToast('Autentificare necesară pentru editare.', 'error');
+            return;
+        }
+
+        const adminReply = [
+            `Departament responsabil: ${editForm.department}`,
+            editForm.adminMessage ? `Mesaj admin: ${editForm.adminMessage}` : null,
+        ].filter(Boolean).join('\n');
+
+        const payload = {
+            title: editForm.title,
+            description: editForm.description,
+            status: sendToDepartment ? 'În lucru' : editForm.status,
+            priority: editForm.priority,
+            category: editForm.category,
+            admin_reply: adminReply,
+        };
+
+        try {
+            const updatedIssue = await updateIssue(editingIssue.id, payload, authToken);
+            setIssues((prev) => prev.map((issue) => (issue.id === editingIssue.id ? { ...issue, ...updatedIssue } : issue)));
+            showToast(sendToDepartment ? 'Sesizare trimisă către departament.' : 'Sesizare actualizată.', 'success');
+            closeEditModal();
+        } catch {
+            showToast('Eroare la salvarea modificărilor.', 'error');
+        }
+    };
+
     const handleDeleteIssue = async (id) => {
         if (!isAdmin) {
             showToast('Doar administratorii pot șterge sesizări.', 'error');
@@ -160,22 +251,22 @@ export default function Dashboard() {
             <div className="dash-header">
                 <div className="dash-header-left">
                     <h1 className="dash-title">
-                        {isAdmin ? '⚙️ Panou Administrator' : '📋 Sesizările mele'}
+                        {isAdmin ? '⚙️ Panou Administrator' : '📋 Toate sesizările'}
                     </h1>
                     <p className="dash-subtitle">
                         {isAdmin
                             ? `Gestionezi toate sesizările din municipiu · ${stats.total} total`
-                            : 'Urmărește și gestionează sesizările tale'}
+                            : ''}
                     </p>
                 </div>
             </div>
 
             {/* Stats mini */}
             <div className="dash-stats-row">
-                <StatMini value={stats.total} label="Total" color="#3b82f6" icon="📋" />
+                <StatMini value={stats.total} label="Total" color="#3b82f6" icon="" />
                 <StatMini value={stats.nou} label="Noi" color="#ef4444" icon="🆕" />
-                <StatMini value={stats.inLucru} label="În lucru" color="#f59e0b" icon="⚙️" />
-                <StatMini value={stats.rezolvat} label="Rezolvate" color="#10b981" icon="✅" />
+                <StatMini value={stats.inLucru} label="În lucru" color="#f59e0b" icon="L" />
+                <StatMini value={stats.rezolvat} label="Rezolvate" color="#10b981" icon="R" />
             </div>
 
             {/* Toolbar filtre */}
@@ -282,6 +373,13 @@ export default function Dashboard() {
                                     {isAdmin && (
                                         <td className="dash-cell-actions" data-label="Acțiuni">
                                             <button
+                                                className="action-btn action-edit"
+                                                onClick={() => openEditModal(issue)}
+                                                title="Editează și trimite către departament"
+                                            >
+                                                ✏️
+                                            </button>
+                                            <button
                                                 className="action-btn action-delete"
                                                 onClick={() => handleDeleteIssue(issue.id)}
                                                 title="Șterge sesizarea"
@@ -296,6 +394,92 @@ export default function Dashboard() {
                     </table>
                 )}
             </div>
+
+            {editingIssue && (
+                <div className="admin-modal-overlay" onClick={closeEditModal}>
+                    <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+                        <h3>Administrare sesizare #{editingIssue.id}</h3>
+                        <div className="admin-form-grid">
+                            <label>
+                                Titlu
+                                <input
+                                    type="text"
+                                    value={editForm.title}
+                                    onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))}
+                                />
+                            </label>
+                            <label>
+                                Categorie
+                                <select
+                                    value={editForm.category}
+                                    onChange={(e) => setEditForm((prev) => ({
+                                        ...prev,
+                                        category: e.target.value,
+                                        department: getSuggestedDepartment(e.target.value),
+                                    }))}
+                                >
+                                    {CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}
+                                </select>
+                            </label>
+                            <label>
+                                Prioritate
+                                <select
+                                    value={editForm.priority}
+                                    onChange={(e) => setEditForm((prev) => ({ ...prev, priority: e.target.value }))}
+                                >
+                                    {['Urgentă', 'Ridicată', 'Medie', 'Scăzută'].map((priority) => (
+                                        <option key={priority} value={priority}>{priority}</option>
+                                    ))}
+                                </select>
+                            </label>
+                            <label>
+                                Status
+                                <select
+                                    value={editForm.status}
+                                    onChange={(e) => setEditForm((prev) => ({ ...prev, status: e.target.value }))}
+                                >
+                                    {STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
+                                </select>
+                            </label>
+                            <label className="full-width">
+                                Departament responsabil
+                                <select
+                                    value={editForm.department}
+                                    onChange={(e) => setEditForm((prev) => ({ ...prev, department: e.target.value }))}
+                                >
+                                    {DEPARTMENTS.map((department) => <option key={department} value={department}>{department}</option>)}
+                                </select>
+                            </label>
+                            <label className="full-width">
+                                Descriere
+                                <textarea
+                                    rows={4}
+                                    value={editForm.description}
+                                    onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
+                                />
+                            </label>
+                            <label className="full-width">
+                                Mesaj către departament
+                                <textarea
+                                    rows={3}
+                                    value={editForm.adminMessage}
+                                    onChange={(e) => setEditForm((prev) => ({ ...prev, adminMessage: e.target.value }))}
+                                    placeholder="Ex: Vă rugăm intervenție în 24h, afectează trafic pietonal."
+                                />
+                            </label>
+                        </div>
+                        <div className="admin-modal-actions">
+                            <button type="button" className="modal-btn ghost" onClick={closeEditModal}>Anulează</button>
+                            <button type="button" className="modal-btn secondary" onClick={() => saveIssueChanges(false)}>
+                                Salvează modificări
+                            </button>
+                            <button type="button" className="modal-btn primary" onClick={() => saveIssueChanges(true)}>
+                                Trimite către departament
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="dash-count-bar">
                 Afișând <strong>{filtered.length}</strong> din <strong>{issues.length}</strong> sesizări
@@ -484,7 +668,86 @@ export default function Dashboard() {
                     padding: 5px 8px; border-radius: 7px;
                     font-size: 14px; transition: background .15s;
                 }
+                .action-edit:hover { background: rgba(59,130,246,.15); }
                 .action-delete:hover { background: rgba(239,68,68,.15); }
+
+                .admin-modal-overlay {
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(2, 6, 23, .72);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 16px;
+                    z-index: 999;
+                }
+                .admin-modal {
+                    width: min(760px, 100%);
+                    background: #0f1a2e;
+                    border: 1px solid rgba(255,255,255,.1);
+                    border-radius: 14px;
+                    padding: 18px;
+                }
+                .admin-modal h3 {
+                    margin: 0 0 12px;
+                    color: #e8f0fe;
+                    font-size: 1.1rem;
+                }
+                .admin-form-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 10px;
+                }
+                .admin-form-grid label {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                    font-size: 12px;
+                    color: #8fa3c0;
+                }
+                .admin-form-grid input,
+                .admin-form-grid select,
+                .admin-form-grid textarea {
+                    background: rgba(255,255,255,.05);
+                    border: 1px solid rgba(255,255,255,.12);
+                    color: #e8f0fe;
+                    padding: 8px 10px;
+                    border-radius: 8px;
+                    font-family: inherit;
+                    font-size: 13px;
+                    outline: none;
+                }
+                .admin-form-grid textarea { resize: vertical; }
+                .admin-form-grid .full-width { grid-column: 1 / -1; }
+
+                .admin-modal-actions {
+                    margin-top: 14px;
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 8px;
+                    flex-wrap: wrap;
+                }
+                .modal-btn {
+                    border: none;
+                    border-radius: 8px;
+                    padding: 8px 12px;
+                    font-size: 12px;
+                    cursor: pointer;
+                    font-family: inherit;
+                }
+                .modal-btn.ghost {
+                    background: transparent;
+                    color: #93c5fd;
+                    border: 1px solid rgba(147,197,253,.4);
+                }
+                .modal-btn.secondary {
+                    background: rgba(59,130,246,.15);
+                    color: #93c5fd;
+                }
+                .modal-btn.primary {
+                    background: #2563eb;
+                    color: #fff;
+                }
 
                 .dash-loading {
                     display: flex; flex-direction: column; align-items: center;
@@ -578,6 +841,7 @@ export default function Dashboard() {
                 }
                 @media (max-width: 520px) {
                     .dash-select { flex-basis: 100%; }
+                    .admin-form-grid { grid-template-columns: 1fr; }
                 }
             `}</style>
         </div>

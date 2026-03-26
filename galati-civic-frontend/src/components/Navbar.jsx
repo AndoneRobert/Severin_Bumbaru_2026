@@ -15,11 +15,11 @@ const CATEGORIES = [
     { value: 'Iluminat', icon: '💡' },
     { value: 'Apă/Canal', icon: '💧' },
     { value: 'Spații verzi', icon: '🌳' },
-    { value: 'Salubritate', icon: '🗑️' },
+    { value: 'Salubritate', icon: '' },
     { value: 'Zgomot/Poluare', icon: '🔊' },
     { value: 'Vandalism', icon: '🚧' },
     { value: 'Trafic/Parcare', icon: '🚗' },
-    { value: 'Altele', icon: '📋' },
+    { value: 'Altele', icon: '' },
 ];
 const PRIORITIES = [
     { value: 'Scăzută', color: '#22c55e' },
@@ -175,9 +175,6 @@ export default function Navbar() {
                             <Link to="/my-issues" className={m(`nav-link ${isActive('/my-issues') ? 'nav-link-active' : ''}`)}>Sesizările mele</Link>
                         </>
                     )}
-                    {isAdmin && (
-                        <Link to="/admin" className={m(`nav-link nav-link-admin ${isActive('/admin') ? 'nav-link-active' : ''}`)}>Admin</Link>
-                    )}
                 </div>
 
                 {/* Dreapta */}
@@ -204,9 +201,6 @@ export default function Navbar() {
                                     </div>
                                     <div className={m('dropdown-divider')} />
                                     <Link to="/my-issues" className={m('dropdown-item')} onClick={() => setMenuOpen(false)}>Sesizările mele</Link>
-                                    {isAdmin && (
-                                        <Link to="/admin" className={m('dropdown-item dropdown-item-admin')} onClick={() => setMenuOpen(false)}>Panou Admin</Link>
-                                    )}
                                     <div className={m('dropdown-divider')} />
                                     <button className={m('dropdown-item dropdown-logout')} onClick={handleLogout}>Deconectare</button>
                                 </div>
@@ -215,7 +209,6 @@ export default function Navbar() {
                     ) : (
                         <div className={m('nav-auth-btns')}>
                             <Link to="/login" className={m('nav-link')}>Autentificare</Link>
-                            <Link to="/login" className={m('btn-login')}>Înregistrare</Link>
                         </div>
                     )}
 
@@ -235,7 +228,7 @@ export default function Navbar() {
                 {/* Header panel */}
                 <div className={m('rp-header')}>
                     <div className={m('rp-header-left')}>
-                        <div className={m('rp-header-icon')}>🚨</div>
+                        <div className={m('rp-header-icon')}></div>
                         <div>
                             <div className={m('rp-header-title')}>Raportează o problemă</div>
                             <div className={m('rp-header-sub')}>Galați · Sesizare urbană</div>
@@ -282,7 +275,7 @@ export default function Navbar() {
 
                         {location ? (
                             <div className={m('rp-loc-ok')}>
-                                <span>✓ Locație: {location.lat.toFixed(4)}, {location.lng.toFixed(4)}</span>
+                                <span>Locație: {location.lat.toFixed(4)}, {location.lng.toFixed(4)}</span>
                                 <button className={m('rp-loc-change')} onClick={() => setLocation(null)}>Schimbă</button>
                             </div>
                         ) : (
@@ -382,7 +375,7 @@ export default function Navbar() {
 
                         {/* Preview locație */}
                         <div className={m('rp-loc-bar')}>
-                            📍 {location?.lat.toFixed(4)}, {location?.lng.toFixed(4)}
+                            {location?.lat.toFixed(4)}, {location?.lng.toFixed(4)}
                             <button className={m('rp-loc-change')} onClick={() => setStep(1)}>Schimbă locația</button>
                         </div>
 
@@ -413,7 +406,7 @@ export default function Navbar() {
                         </p>
                         <div className={m('rp-success-details')}>
                             <div className={m('rp-sd-row')}>
-                                <span>📋 Titlu</span>
+                                <span> Titlu</span>
                                 <strong>{form.title}</strong>
                             </div>
                             <div className={m('rp-sd-row')}>
@@ -433,7 +426,7 @@ export default function Navbar() {
                         </div>
                         <div className={m('rp-success-actions')}>
                             <button className={m('rp-btn-primary')} onClick={closeReport}>
-                                ✓ Închide
+                                Închide
                             </button>
                             <button
                                 className={m('rp-btn-secondary')}
@@ -442,7 +435,7 @@ export default function Navbar() {
                                     navigate('/my-issues');
                                 }}
                             >
-                                📋 Vezi sesizările mele
+                                 Vezi sesizările mele
                             </button>
                         </div>
                         {/* Confetti dots */}
