@@ -2,8 +2,8 @@ const supabase = require('../config/supabase');
 
 const issuesTable = process.env.SUPABASE_ISSUES_TABLE || 'issues';
 
-const listIssues = async () => {
-    const { data, error } = await supabase
+const listIssues = async (dbClient = supabase) => {
+    const { data, error } = await dbClient
         .from(issuesTable)
         .select('*')
         .order('created_at', { ascending: false });
@@ -12,8 +12,8 @@ const listIssues = async () => {
     return data || [];
 };
 
-const listIssuesByUser = async (userId) => {
-    const { data, error } = await supabase
+const listIssuesByUser = async (userId, dbClient = supabase) => {
+    const { data, error } = await dbClient
         .from(issuesTable)
         .select('*')
         .eq('user_id', userId)
@@ -23,8 +23,8 @@ const listIssuesByUser = async (userId) => {
     return data || [];
 };
 
-const createIssue = async (payload) => {
-    const { data, error } = await supabase
+const createIssue = async (payload, dbClient = supabase) => {
+    const { data, error } = await dbClient
         .from(issuesTable)
         .insert([payload])
         .select('*')
@@ -34,8 +34,8 @@ const createIssue = async (payload) => {
     return data;
 };
 
-const updateIssue = async (id, payload) => {
-    const { data, error } = await supabase
+const updateIssue = async (id, payload, dbClient = supabase) => {
+    const { data, error } = await dbClient
         .from(issuesTable)
         .update(payload)
         .eq('id', id)
@@ -46,8 +46,8 @@ const updateIssue = async (id, payload) => {
     return data;
 };
 
-const deleteIssue = async (id) => {
-    const { error, count } = await supabase
+const deleteIssue = async (id, dbClient = supabase) => {
+    const { error, count } = await dbClient
         .from(issuesTable)
         .delete({ count: 'exact' })
         .eq('id', id);
@@ -56,8 +56,8 @@ const deleteIssue = async (id) => {
     return count;
 };
 
-const getIssueVotes = async (id) => {
-    const { data, error } = await supabase
+const getIssueVotes = async (id, dbClient = supabase) => {
+    const { data, error } = await dbClient
         .from(issuesTable)
         .select('id, votes')
         .eq('id', id)
@@ -67,8 +67,8 @@ const getIssueVotes = async (id) => {
     return data;
 };
 
-const updateIssueVotes = async (id, votes) => {
-    const { data, error } = await supabase
+const updateIssueVotes = async (id, votes, dbClient = supabase) => {
+    const { data, error } = await dbClient
         .from(issuesTable)
         .update({ votes })
         .eq('id', id)

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { apiClient, authConfig } from '../services/apiClient';
 
 import BaseMap from '../features/map/components/BaseMap';
 import LocationPickerLayer from '../features/map/components/LocationPickerLayer';
@@ -46,7 +47,6 @@ export default function Navbar() {
     const panelRef = useRef(null);
     const location_ = useLocation();
     const navigate = useNavigate();
-    const apiUrl = (import.meta.env.VITE_API_URL || 'https://severin-bumbaru-2026.onrender.com/api').replace(/\/+$/, '');
     const useMock = import.meta.env.VITE_USE_MOCK === 'true';
 
     // Închide dropdown la click afară
@@ -114,33 +114,12 @@ export default function Navbar() {
                 await new Promise(r => setTimeout(r, 900));
             } else {
                 const token = (await getToken?.()) || user?.token;
-                const response = await fetch(`${apiUrl}/issues`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                    },
-                    body: JSON.stringify({
-                        ...form,
-                        lat: location.lat,
-                        lng: location.lng,
-                        user_id: user?.id ?? null,
-                    }),
-                });
-                if (!response.ok) {
-                    let apiMessage = '';
-                    try {
-                        const payload = await response.json();
-                        apiMessage = payload?.error || payload?.message || '';
-                    } catch {
-                        // ignore parse errors and keep fallback below
-                    }
-
-                    const submitError = new Error('Eroare la trimitere. Încearcă din nou.');
-                    submitError.status = response.status;
-                    submitError.apiMessage = apiMessage;
-                    throw submitError;
-                }
+                await apiClient.post('/issues', {
+                    ...form,
+                    lat: location.lat,
+                    lng: location.lng,
+                    user_id: user?.id ?? null,
+                }, authConfig(token));
             }
             setStep(3);
         } catch (error) {

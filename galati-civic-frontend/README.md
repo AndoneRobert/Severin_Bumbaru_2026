@@ -31,3 +31,23 @@ await createTableRow('categories', { name: 'Iluminat public', color: '#f59e0b' }
 The backend must allow the table in:
 - `SUPABASE_READ_TABLES` for reads
 - `SUPABASE_WRITE_TABLES` for writes
+
+## Environment variables
+
+Create a `.env` file in `galati-civic-frontend/` and define:
+
+```bash
+# Required: backend API base URL used by src/services/apiClient.js
+VITE_API_URL=https://severin-bumbaru-2026.onrender.com/api
+
+# Required for Supabase auth/storage calls
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Optional: run frontend with mock data instead of backend requests
+VITE_USE_MOCK=false
+```
+
+Notes:
+- `VITE_API_URL` is the single source of truth for API requests and is read via `apiBaseUrl` in `src/services/apiClient.js`.
+- Keep the `/api` suffix in `VITE_API_URL` so endpoint paths like `/issues` resolve correctly.

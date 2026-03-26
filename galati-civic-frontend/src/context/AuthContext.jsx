@@ -2,6 +2,28 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '../services/supabase';
 
 const AuthContext = createContext({});
+const ADMIN_ROLE = 'admin';
+
+const normalizeRole = (role) => (typeof role === 'string' ? role.trim().toLowerCase() : null);
+
+const getServerClaimRole = (supabaseUser) => {
+    if (!supabaseUser) return null;
+
+    const roleCandidates = [
+        supabaseUser?.app_metadata?.role,
+        supabaseUser?.app_metadata?.claims?.role,
+        supabaseUser?.user_metadata?.role,
+    ];
+
+    const rolesClaim = supabaseUser?.app_metadata?.roles;
+    if (Array.isArray(rolesClaim)) {
+        roleCandidates.push(...rolesClaim);
+    }
+
+    return roleCandidates
+        .map(normalizeRole)
+        .find(Boolean) || null;
+};
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser]       = useState(null);
@@ -77,7 +99,9 @@ export const AuthProvider = ({ children }) => {
         return session?.access_token ?? null;
     };
 
-    const isAdmin = profile?.role === 'admin';
+    const profileRole = normalizeRole(profile?.role);
+    const claimRole = getServerClaimRole(user);
+    const isAdmin = profileRole === ADMIN_ROLE || claimRole === ADMIN_ROLE;
 
     const value = {
         user,

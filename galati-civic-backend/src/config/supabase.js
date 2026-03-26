@@ -8,8 +8,14 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error('SUPABASE_URL și SUPABASE_SERVICE_ROLE_KEY (sau SUPABASE_KEY) trebuie definite în variabilele de mediu.');
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey, {
+const createSupabaseClient = (accessToken = null) => createClient(supabaseUrl, supabaseKey, {
   auth: { persistSession: false, autoRefreshToken: false },
+  global: accessToken
+    ? { headers: { Authorization: `Bearer ${accessToken}` } }
+    : undefined,
 });
 
+const supabase = createSupabaseClient();
+
 module.exports = supabase;
+module.exports.createSupabaseClient = createSupabaseClient;
