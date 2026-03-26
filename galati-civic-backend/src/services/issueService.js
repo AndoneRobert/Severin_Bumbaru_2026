@@ -251,6 +251,62 @@ const createNotification = async ({
     return data;
 };
 
+const listNotificationsByUser = async (userId, dbClient = supabase) => {
+    const { data } = await runOnNotificationsTable(async (table) => dbClient
+        .from(table)
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50));
+
+    return data || [];
+};
+
+const markNotificationRead = async ({ notificationId, userId }, dbClient = supabase) => {
+    const { data, error } = await runOnNotificationsTable(async (table) => dbClient
+        .from(table)
+        .update({ read: true })
+        .eq('id', notificationId)
+        .eq('user_id', userId)
+        .select('*')
+        .single());
+
+    if (error) throw error;
+    return data;
+};
+
+const createInternalIssueComment = async ({
+    issueId,
+    userId,
+    department,
+    message,
+}, dbClient = supabase) => {
+    const baseBody = [`Departament: ${department}`, message ? `Mesaj: ${message}` : null]
+        .filter(Boolean)
+        .join('\n');
+
+    const payloadCandidates = unique([
+        JSON.stringify({ issue_id: issueId, user_id: userId, body: baseBody, is_internal: true }),
+        JSON.stringify({ issue_id: issueId, user_id: userId, comment: baseBody, is_internal: true }),
+        JSON.stringify({ issue_id: issueId, user_id: userId, body: baseBody }),
+        JSON.stringify({ issue_id: issueId, user_id: userId, comment: baseBody }),
+    ]).map((entry) => JSON.parse(entry));
+
+    let lastError = null;
+    for (const payload of payloadCandidates) {
+        const result = await runOnIssueCommentsTable(async (table) => dbClient
+            .from(table)
+            .insert([payload])
+            .select('*')
+            .single());
+
+        if (!result.error) return result.data;
+        lastError = result.error;
+    }
+
+    throw lastError;
+};
+
 module.exports = {
     issuesTable,
     issueVotesTable,
@@ -273,6 +329,9 @@ module.exports = {
     countFlagsForIssue,
     countFlagsByUser,
     createNotification,
+    listNotificationsByUser,
+    markNotificationRead,
+    createInternalIssueComment,
     runOnIssueCommentsTable,
     runOnIssueFollowsTable,
     runOnIssueFlagsTable,
