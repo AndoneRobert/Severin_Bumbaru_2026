@@ -1,22 +1,10 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
 import { useAuth } from '../context/AuthContext';
 
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIcon2x, iconUrl: markerIcon, shadowUrl: markerShadow });
-
-const SELECTED_ICON = L.divIcon({
-    className: '',
-    html: `<div style="width:26px;height:26px;border-radius:50% 50% 50% 0;background:#a855f7;border:2.5px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.5);transform:rotate(-45deg);"></div>`,
-    iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -30],
-});
+import BaseMap from '../features/map/components/BaseMap';
+import LocationPickerLayer from '../features/map/components/LocationPickerLayer';
+import { SELECTED_ICON } from '../features/map/utils/mapIcons';
 
 const CATEGORIES = [
     { value: 'Infrastructură', icon: '🛣️' },
@@ -37,11 +25,6 @@ const PRIORITIES = [
 ];
 const GALATI_CENTER = [45.4353, 28.0080];
 
-// Map click handler
-const MapPicker = ({ onPick, active }) => {
-    useMapEvents({ click(e) { if (active) onPick(e.latlng); } });
-    return null;
-};
 
 export default function Navbar() {
     const { user, isAdmin, isAuthenticated, logout, displayName, avatarInitial, getToken } = useAuth();
@@ -256,11 +239,14 @@ export default function Navbar() {
 
                         <div className="rp-map-wrap">
                             {reportOpen && (
-                                <MapContainer center={GALATI_CENTER} zoom={13} style={{ height: '100%', width: '100%' }}>
-                                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                                    <MapPicker active={true} onPick={latlng => { setLocation(latlng); setFormErrors(e => ({ ...e, location: '' })); }} />
-                                    {location && <Marker position={location} icon={SELECTED_ICON} />}
-                                </MapContainer>
+                                <BaseMap center={GALATI_CENTER} zoom={13} style={{ height: '100%', width: '100%' }}>
+                                    <LocationPickerLayer
+                                        enabled
+                                        location={location}
+                                        icon={SELECTED_ICON}
+                                        onPickLocation={(latlng) => { setLocation(latlng); setFormErrors(e => ({ ...e, location: '' })); }}
+                                    />
+                                </BaseMap>
                             )}
                         </div>
 

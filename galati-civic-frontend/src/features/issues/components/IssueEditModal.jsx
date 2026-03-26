@@ -1,5 +1,6 @@
 import React from 'react';
-import { MapContainer, Marker, TileLayer } from 'react-leaflet';
+import BaseMap from '../../map/components/BaseMap';
+import LocationPickerLayer from '../../map/components/LocationPickerLayer';
 
 const IssueEditModal = ({
     editingIssue,
@@ -11,7 +12,6 @@ const IssueEditModal = ({
     onLocationPick,
     onSave,
     selectedIcon,
-    MapPicker,
 }) => {
     if (!editingIssue) return null;
 
@@ -33,11 +33,9 @@ const IssueEditModal = ({
                         <div className="ci-field">
                             <label>Locație (click pe hartă pentru a schimba)</label>
                             <div style={{ borderRadius: '10px', overflow: 'hidden', height: '260px' }}>
-                                <MapContainer center={[editLocation?.lat ?? editingIssue.lat, editLocation?.lng ?? editingIssue.lng]} zoom={15} style={{ height: '100%', width: '100%' }}>
-                                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                                    <MapPicker editMode onPick={onLocationPick} />
-                                    <Marker position={[editLocation?.lat ?? editingIssue.lat, editLocation?.lng ?? editingIssue.lng]} icon={selectedIcon} />
-                                </MapContainer>
+                                <BaseMap center={[editLocation?.lat ?? editingIssue.lat, editLocation?.lng ?? editingIssue.lng]} zoom={15} style={{ height: '100%', width: '100%' }}>
+                                    <LocationPickerLayer location={[editLocation?.lat ?? editingIssue.lat, editLocation?.lng ?? editingIssue.lng]} onPickLocation={onLocationPick} icon={selectedIcon} />
+                                </BaseMap>
                             </div>
                         </div>
                     </div>

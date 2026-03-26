@@ -1,5 +1,6 @@
 import React from 'react';
-import { MapContainer, Marker, TileLayer } from 'react-leaflet';
+import BaseMap from '../../map/components/BaseMap';
+import LocationPickerLayer from '../../map/components/LocationPickerLayer';
 
 const NewIssueStepper = ({
     step,
@@ -16,7 +17,6 @@ const NewIssueStepper = ({
     priorities,
     mapCenter,
     selectedIcon,
-    MapPicker,
 }) => (
     <div className="ci-new-section">
         <div className="ci-stepper">
@@ -32,11 +32,9 @@ const NewIssueStepper = ({
                 <div className="ci-card-header"><span className="ci-card-icon">📍</span><div><h2>Selectează locația problemei</h2><p>Click pe hartă exact unde se află problema</p></div></div>
                 {formErrors.location && <div className="ci-err">{formErrors.location}</div>}
                 <div className="ci-map-pick">
-                    <MapContainer center={mapCenter} zoom={14} style={{ height: '420px', width: '100%' }}>
-                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
-                        <MapPicker editMode onPick={(latlng) => setForm((f) => ({ ...f, lat: latlng.lat, lng: latlng.lng }))} />
-                        {form.lat && form.lng && <Marker position={[form.lat, form.lng]} icon={selectedIcon} />}
-                    </MapContainer>
+                    <BaseMap center={mapCenter} zoom={14} style={{ height: '420px', width: '100%' }} attribution="&copy; OpenStreetMap">
+                        <LocationPickerLayer location={form.lat && form.lng ? [form.lat, form.lng] : null} icon={selectedIcon} onPickLocation={(latlng) => setForm((f) => ({ ...f, lat: latlng.lat, lng: latlng.lng }))} />
+                    </BaseMap>
                 </div>
                 {form.lat && form.lng ? (
                     <div className="ci-loc-confirm"><span>✓ Locație selectată: {form.lat.toFixed(5)}, {form.lng.toFixed(5)}</span><button className="ci-change-loc" onClick={() => setForm((f) => ({ ...f, lat: null, lng: null }))}>Schimbă</button></div>

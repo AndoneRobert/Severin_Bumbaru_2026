@@ -1,26 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import axios from 'axios';
-import 'leaflet/dist/leaflet.css';
 import { useAuth } from '../context/AuthContext';
-import L from 'leaflet';
 
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIcon2x, iconUrl: markerIcon, shadowUrl: markerShadow });
-
-const makeIcon = (color) => L.divIcon({
-    className: '',
-    html: `<div style="width:26px;height:26px;border-radius:50% 50% 50% 0;background:${color};border:2.5px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.4);transform:rotate(-45deg);"></div>`,
-    iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -30],
-});
-const STATUS_ICONS = {
-    'Nou': makeIcon('#ef4444'), 'În lucru': makeIcon('#f59e0b'),
-    'Rezolvat': makeIcon('#10b981'), 'În verificare': makeIcon('#3b82f6'),
-};
+import BaseMap from '../features/map/components/BaseMap';
+import IssueMarkersLayer from '../features/map/components/IssueMarkersLayer';
+import LocationPickerLayer from '../features/map/components/LocationPickerLayer';
 
 const CATEGORIES = [
     { value: 'Infrastructură', icon: '🛣️' }, { value: 'Iluminat', icon: '💡' },
@@ -254,11 +238,6 @@ const Home = () => {
     const recentActivity = [...issues].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
     const resolvedCount = issues.filter(i => i.status === 'Rezolvat').length;
     const resolveRate = issues.length ? Math.round((resolvedCount / issues.length) * 100) : 0;
-
-    const MapInteraction = () => {
-        useMapEvents({ click(e) { if (!user) { showToast('Trebuie să fii logat!', 'error'); return; } setNewLocation(e.latlng); } });
-        return null;
-    };
 
     const DetailModal = ({ issue }) => {
         if (!issue) return null;
@@ -568,51 +547,50 @@ const Home = () => {
                     ) : (
                         <div className="map-hint map-hint-guest">🔒 <a href="/login">Loghează-te</a> pentru a adăuga sesizări</div>
                     )}
-                    <MapContainer center={GALATI_CENTER} zoom={13} style={{ height: '600px', width: '100%' }}>
-                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
-                        <MapInteraction />
-                        {newLocation && (
-                            <Marker position={newLocation}>
-                                <Popup maxWidth={300} closeOnClick={false}>
-                                    <form onSubmit={handleAddIssue} className="map-form">
-                                        <h4 className="map-form-title">🚨 Raportează problema</h4>
-                                        <input type="text" placeholder="Titlu sesizare *" required className="map-input" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} maxLength={100} />
-                                        <textarea placeholder="Descriere *" required className="map-input" rows={3} value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} maxLength={500} />
-                                        <select className="map-input" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
-                                            {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.icon} {c.value}</option>)}
-                                        </select>
-                                        <select className="map-input" value={formData.priority} onChange={e => setFormData({ ...formData, priority: e.target.value })}>
-                                            {PRIORITY_LEVELS.map(p => <option key={p} value={p}>{p}</option>)}
-                                        </select>
-                                        <div className="map-form-btns">
-                                            <button type="submit" className="btn-map-submit" disabled={submitting}>{submitting ? '⏳ Se trimite...' : '📤 Trimite'}</button>
-                                            <button type="button" className="btn-map-cancel" onClick={() => setNewLocation(null)}>Anulează</button>
-                                        </div>
-                                    </form>
-                                </Popup>
-                            </Marker>
-                        )}
-                        {filteredIssues.map(issue => {
-                            const lat = issue.lat || issue.latitude;
-                            const lng = issue.lng || issue.longitude;
-                            if (!lat || !lng) return null;
-                            return (
-                                <Marker key={issue.id} position={[lat, lng]} icon={STATUS_ICONS[issue.status] || STATUS_ICONS['Nou']} eventHandlers={{ click: () => setSelectedIssue(issue) }}>
-                                    <Popup maxWidth={240}>
-                                        <div className="map-popup">
-                                            <strong>{issue.title}</strong>
-                                            <div className="popup-meta"><StatusBadge status={issue.status} /><PriorityDot priority={issue.priority} /></div>
-                                            <p>{issue.description?.substring(0, 100)}{issue.description?.length > 100 ? '...' : ''}</p>
-                                            <div className="popup-footer">
-                                                <span className="popup-votes">▲ {issue.votes || 0} voturi</span>
-                                                <button onClick={() => setSelectedIssue(issue)} className="popup-detail-btn">Detalii →</button>
-                                            </div>
-                                        </div>
-                                    </Popup>
-                                </Marker>
-                            );
-                        })}
-                    </MapContainer>
+                    <BaseMap center={GALATI_CENTER} zoom={13} style={{ height: '600px', width: '100%' }}>
+                        <LocationPickerLayer
+                            enabled={Boolean(user)}
+                            location={newLocation}
+                            onPickLocation={(latlng) => {
+                                if (!user) { showToast('Trebuie să fii logat!', 'error'); return; }
+                                setNewLocation(latlng);
+                            }}
+                            renderPopup={() => (
+                                <form onSubmit={handleAddIssue} className="map-form">
+                                    <h4 className="map-form-title">🚨 Raportează problema</h4>
+                                    <input type="text" placeholder="Titlu sesizare *" required className="map-input" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} maxLength={100} />
+                                    <textarea placeholder="Descriere *" required className="map-input" rows={3} value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} maxLength={500} />
+                                    <select className="map-input" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                                        {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.icon} {c.value}</option>)}
+                                    </select>
+                                    <select className="map-input" value={formData.priority} onChange={e => setFormData({ ...formData, priority: e.target.value })}>
+                                        {PRIORITY_LEVELS.map(p => <option key={p} value={p}>{p}</option>)}
+                                    </select>
+                                    <div className="map-form-btns">
+                                        <button type="submit" className="btn-map-submit" disabled={submitting}>{submitting ? '⏳ Se trimite...' : '📤 Trimite'}</button>
+                                        <button type="button" className="btn-map-cancel" onClick={() => setNewLocation(null)}>Anulează</button>
+                                    </div>
+                                </form>
+                            )}
+                        />
+                        <IssueMarkersLayer
+                            issues={filteredIssues}
+                            selectedIssueId={selectedIssue?.id}
+                            onSelectIssue={setSelectedIssue}
+                            onVote={handleVote}
+                            renderPopup={(issue) => (
+                                <div className="map-popup">
+                                    <strong>{issue.title}</strong>
+                                    <div className="popup-meta"><StatusBadge status={issue.status} /><PriorityDot priority={issue.priority} /></div>
+                                    <p>{issue.description?.substring(0, 100)}{issue.description?.length > 100 ? '...' : ''}</p>
+                                    <div className="popup-footer">
+                                        <span className="popup-votes">▲ {issue.votes || 0} voturi</span>
+                                        <button onClick={() => setSelectedIssue(issue)} className="popup-detail-btn">Detalii →</button>
+                                    </div>
+                                </div>
+                            )}
+                        />
+                    </BaseMap>
                     <div className="map-legend">
                         <span className="legend-item"><span className="legend-dot" style={{ background: '#ef4444' }} />Nou</span>
                         <span className="legend-item"><span className="legend-dot" style={{ background: '#f59e0b' }} />În lucru</span>

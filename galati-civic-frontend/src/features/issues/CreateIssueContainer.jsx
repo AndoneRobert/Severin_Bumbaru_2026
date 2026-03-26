@@ -1,9 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { useMapEvents } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
 import { useAuth } from '../../context/AuthContext';
 import { pageStyles } from './createIssueStyles';
 import IssueTabs from './components/IssueTabs';
@@ -13,20 +10,7 @@ import IssuesMapPanel from './components/IssuesMapPanel';
 import IssueEditModal from './components/IssueEditModal';
 import IssueDeleteConfirm from './components/IssueDeleteConfirm';
 
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIcon2x, iconUrl: markerIcon, shadowUrl: markerShadow });
-
-const makeIcon = (color) => L.divIcon({ className: '', html: `<div style="width:26px;height:26px;border-radius:50% 50% 50% 0;background:${color};border:2.5px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.4);transform:rotate(-45deg);"></div>`, iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -30] });
-const NEW_ICON = makeIcon('#ef4444');
-const PROGRESS_ICON = makeIcon('#f59e0b');
-const DONE_ICON = makeIcon('#10b981');
-const REVIEW_ICON = makeIcon('#3b82f6');
-const SELECTED_ICON = makeIcon('#a855f7');
-const STATUS_ICONS = { Nou: NEW_ICON, 'În lucru': PROGRESS_ICON, Rezolvat: DONE_ICON, 'În verificare': REVIEW_ICON };
+import { SELECTED_ICON } from '../map/utils/mapIcons';
 const GALATI_CENTER = [45.4353, 28.008];
 
 const CATEGORIES = [
@@ -52,7 +36,6 @@ const MOCK_MY_ISSUES = [
     { id: 102, title: 'Iluminat lipsă Parc Mazepa', description: 'Zona din spatele parcului nu are iluminat nocturn, periculoasă seara.', category: 'Iluminat', priority: 'Medie', status: 'Nou', lat: 45.438, lng: 28.01, votes: 5, created_at: '2026-03-10T14:00:00Z', isOwn: true },
 ];
 
-const MapPicker = ({ onPick, editMode }) => { useMapEvents({ click: (e) => { if (editMode) onPick(e.latlng); } }); return null; };
 const Toast = ({ msg, show, type = 'info' }) => <div className={`ci-toast ci-toast-${type}${show ? ' ci-toast-show' : ''}`}><span>{type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span>{msg}</div>;
 const StatusBadge = ({ status }) => {
     const map = { Nou: { cls: 'ci-badge-new', label: '🔴 Nou' }, 'În lucru': { cls: 'ci-badge-progress', label: '🟡 În lucru' }, Rezolvat: { cls: 'ci-badge-done', label: '🟢 Rezolvat' }, 'În verificare': { cls: 'ci-badge-review', label: '🔵 Verificare' } };
@@ -204,8 +187,8 @@ const CreateIssueContainer = () => {
 
             <div className="ci-body">
                 {tab === 'my' && <div className="ci-my-section"><MyIssuesPanel isLoading={isLoading} myIssues={myIssues} onSelectIssue={setSelectedIssue} onStartNew={() => { setTab('new'); setStep(1); }} onVote={handleVote} votedIssues={votedIssues} onEdit={openEdit} onDelete={setDeleteConfirm} categories={CATEGORIES} priorities={PRIORITIES} StatusBadge={StatusBadge} /></div>}
-                {tab === 'new' && <NewIssueStepper step={step} form={form} formErrors={formErrors} setForm={setForm} setFormErrors={setFormErrors} onBack={() => setStep((s) => Math.max(1, s - 1))} onNext={() => { setFormErrors({}); setStep((s) => Math.min(3, s + 1)); }} onSubmit={handleSubmit} submitting={submitting} validate={validate} categories={CATEGORIES} priorities={PRIORITIES} mapCenter={GALATI_CENTER} selectedIcon={SELECTED_ICON} MapPicker={MapPicker} />}
-                {tab === 'map' && <IssuesMapPanel mapSearch={mapSearch} onMapSearchChange={setMapSearch} mapFilter={mapFilter} onMapFilterChange={setMapFilter} filteredForMap={filteredForMap} onSelectIssue={setSelectedIssue} selectedIssue={selectedIssue} categories={CATEGORIES} StatusBadge={StatusBadge} statusIcons={STATUS_ICONS} defaultIcon={NEW_ICON} mapCenter={GALATI_CENTER} MapPicker={MapPicker} />}
+                {tab === 'new' && <NewIssueStepper step={step} form={form} formErrors={formErrors} setForm={setForm} setFormErrors={setFormErrors} onBack={() => setStep((s) => Math.max(1, s - 1))} onNext={() => { setFormErrors({}); setStep((s) => Math.min(3, s + 1)); }} onSubmit={handleSubmit} submitting={submitting} validate={validate} categories={CATEGORIES} priorities={PRIORITIES} mapCenter={GALATI_CENTER} selectedIcon={SELECTED_ICON} />}
+                {tab === 'map' && <IssuesMapPanel mapSearch={mapSearch} onMapSearchChange={setMapSearch} mapFilter={mapFilter} onMapFilterChange={setMapFilter} filteredForMap={filteredForMap} onSelectIssue={setSelectedIssue} selectedIssueId={selectedIssue?.id} categories={CATEGORIES} StatusBadge={StatusBadge} mapCenter={GALATI_CENTER} onVote={handleVote} />}
             </div>
 
             {selectedIssue && (
@@ -216,8 +199,7 @@ const CreateIssueContainer = () => {
                     </div>
                 </div>
             )}
-
-            <IssueEditModal editingIssue={editingIssue} onClose={() => setEditingIssue(null)} onChange={(field, value) => setEditingIssue((prev) => ({ ...prev, [field]: value }))} categories={CATEGORIES} priorities={PRIORITIES} editLocation={editLocation} onLocationPick={setEditLocation} onSave={saveEdit} selectedIcon={SELECTED_ICON} MapPicker={MapPicker} />
+            <IssueEditModal editingIssue={editingIssue} onClose={() => setEditingIssue(null)} onChange={(field, value) => setEditingIssue((prev) => ({ ...prev, [field]: value }))} categories={CATEGORIES} priorities={PRIORITIES} editLocation={editLocation} onLocationPick={setEditLocation} onSave={saveEdit} selectedIcon={SELECTED_ICON} />
             <IssueDeleteConfirm deleteId={deleteConfirm} onCancel={() => setDeleteConfirm(null)} onConfirm={confirmDelete} />
         </div>
     );
