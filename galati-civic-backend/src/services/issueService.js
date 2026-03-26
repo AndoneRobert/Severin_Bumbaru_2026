@@ -1,8 +1,16 @@
 const supabase = require('../config/supabase');
 
 const issuesTable = process.env.SUPABASE_ISSUES_TABLE || 'issues';
+const issueVotesTable = process.env.SUPABASE_ISSUE_VOTES_TABLE || 'issues_votes';
+const issueCommentsTable = process.env.SUPABASE_ISSUE_COMMENTS_TABLE || 'issues_comments';
+
 const ISSUE_TABLE_CANDIDATES = [issuesTable, 'issues', 'rapoarte'];
+const ISSUE_VOTES_TABLE_CANDIDATES = [issueVotesTable, 'issues_votes', 'report_votes'];
+const ISSUE_COMMENTS_TABLE_CANDIDATES = [issueCommentsTable, 'issues_comments', 'report_comments'];
+
 let resolvedIssuesTable = process.env.SUPABASE_ISSUES_TABLE || null;
+let resolvedIssueVotesTable = process.env.SUPABASE_ISSUE_VOTES_TABLE || null;
+let resolvedIssueCommentsTable = process.env.SUPABASE_ISSUE_COMMENTS_TABLE || null;
 
 const unique = (items) => [...new Set(items.filter(Boolean))];
 
@@ -14,19 +22,17 @@ const isMissingTableError = (error) => {
         || message.includes('could not find the table');
 };
 
-const runOnIssueTable = async (dbClient, operation) => {
-    const tableCandidates = unique([
-        resolvedIssuesTable,
-        ...ISSUE_TABLE_CANDIDATES,
-    ]);
-
+const runOnTable = async (operation, tableCandidates, resolvedTableRef) => {
+    const candidates = unique([resolvedTableRef.value, ...tableCandidates]);
     let lastError = null;
-    for (const table of tableCandidates) {
+
+    for (const table of candidates) {
         const result = await operation(table);
         if (!result.error) {
-            resolvedIssuesTable = table;
+            resolvedTableRef.value = table;
             return result;
         }
+
         lastError = result.error;
         if (!isMissingTableError(result.error)) break;
     }
@@ -34,8 +40,35 @@ const runOnIssueTable = async (dbClient, operation) => {
     throw lastError;
 };
 
+const runOnIssueTable = (operation) => runOnTable(operation, ISSUE_TABLE_CANDIDATES, {
+    get value() {
+        return resolvedIssuesTable;
+    },
+    set value(next) {
+        resolvedIssuesTable = next;
+    },
+});
+
+const runOnIssueVotesTable = (operation) => runOnTable(operation, ISSUE_VOTES_TABLE_CANDIDATES, {
+    get value() {
+        return resolvedIssueVotesTable;
+    },
+    set value(next) {
+        resolvedIssueVotesTable = next;
+    },
+});
+
+const runOnIssueCommentsTable = (operation) => runOnTable(operation, ISSUE_COMMENTS_TABLE_CANDIDATES, {
+    get value() {
+        return resolvedIssueCommentsTable;
+    },
+    set value(next) {
+        resolvedIssueCommentsTable = next;
+    },
+});
+
 const listIssues = async (dbClient = supabase) => {
-    const { data } = await runOnIssueTable(dbClient, async (table) => dbClient
+    const { data } = await runOnIssueTable(async (table) => dbClient
         .from(table)
         .select('*')
         .order('created_at', { ascending: false }));
@@ -43,7 +76,7 @@ const listIssues = async (dbClient = supabase) => {
 };
 
 const listIssuesByUser = async (userId, dbClient = supabase) => {
-    const { data } = await runOnIssueTable(dbClient, async (table) => dbClient
+    const { data } = await runOnIssueTable(async (table) => dbClient
         .from(table)
         .select('*')
         .eq('user_id', userId)
@@ -52,7 +85,7 @@ const listIssuesByUser = async (userId, dbClient = supabase) => {
 };
 
 const createIssue = async (payload, dbClient = supabase) => {
-    const { data } = await runOnIssueTable(dbClient, async (table) => dbClient
+    const { data } = await runOnIssueTable(async (table) => dbClient
         .from(table)
         .insert([payload])
         .select('*')
@@ -61,7 +94,7 @@ const createIssue = async (payload, dbClient = supabase) => {
 };
 
 const updateIssue = async (id, payload, dbClient = supabase) => {
-    const { data } = await runOnIssueTable(dbClient, async (table) => dbClient
+    const { data } = await runOnIssueTable(async (table) => dbClient
         .from(table)
         .update(payload)
         .eq('id', id)
@@ -71,7 +104,7 @@ const updateIssue = async (id, payload, dbClient = supabase) => {
 };
 
 const deleteIssue = async (id, dbClient = supabase) => {
-    const { count } = await runOnIssueTable(dbClient, async (table) => dbClient
+    const { count } = await runOnIssueTable(async (table) => dbClient
         .from(table)
         .delete({ count: 'exact' })
         .eq('id', id));
@@ -79,7 +112,7 @@ const deleteIssue = async (id, dbClient = supabase) => {
 };
 
 const getIssueVotes = async (id, dbClient = supabase) => {
-    const { data } = await runOnIssueTable(dbClient, async (table) => dbClient
+    const { data } = await runOnIssueTable(async (table) => dbClient
         .from(table)
         .select('id, votes')
         .eq('id', id)
@@ -88,7 +121,7 @@ const getIssueVotes = async (id, dbClient = supabase) => {
 };
 
 const updateIssueVotes = async (id, votes, dbClient = supabase) => {
-    const { data } = await runOnIssueTable(dbClient, async (table) => dbClient
+    const { data } = await runOnIssueTable(async (table) => dbClient
         .from(table)
         .update({ votes })
         .eq('id', id)
@@ -97,8 +130,22 @@ const updateIssueVotes = async (id, votes, dbClient = supabase) => {
     return data;
 };
 
+const voteForIssue = async ({ issueId, userId }, dbClient = supabase) => {
+    const { error } = await runOnIssueVotesTable(async (table) => dbClient
+        .from(table)
+        .insert([{ issue_id: issueId, user_id: userId }]));
+
+    if (error) throw error;
+
+    const issue = await getIssueVotes(issueId, dbClient);
+    const nextVotes = (issue?.votes || 0) + 1;
+    return updateIssueVotes(issueId, nextVotes, dbClient);
+};
+
 module.exports = {
     issuesTable,
+    issueVotesTable,
+    issueCommentsTable,
     listIssues,
     listIssuesByUser,
     createIssue,
@@ -106,4 +153,6 @@ module.exports = {
     deleteIssue,
     getIssueVotes,
     updateIssueVotes,
+    voteForIssue,
+    runOnIssueCommentsTable,
 };

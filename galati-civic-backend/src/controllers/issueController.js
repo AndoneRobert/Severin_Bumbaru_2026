@@ -148,13 +148,20 @@ const deleteIssue = async (req, res) => {
 
 const voteIssue = async (req, res) => {
     const { id } = req.params;
-    try {
-        const issue = await issueService.getIssueVotes(id, req.supabase);
-        const nextVotes = (issue.votes || 0) + 1;
-        const data = await issueService.updateIssueVotes(id, nextVotes, req.supabase);
+    const userId = req.user?.id;
 
+    if (!userId) {
+        return res.status(401).json({ error: 'Utilizator neautentificat.' });
+    }
+
+    try {
+        const data = await issueService.voteForIssue({ issueId: id, userId }, req.supabase);
         return res.json(data);
     } catch (err) {
+        if (err?.code === '23505') {
+            return res.status(409).json({ error: 'Ai votat deja această sesizare.' });
+        }
+
         console.error('[DB ERROR POST ISSUE VOTE]:', err);
         return res.status(500).json({ error: 'Eroare la votarea raportului.' });
     }
