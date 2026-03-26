@@ -12,6 +12,9 @@ router.post('/issues', requireAuth, issueController.createIssue);
 router.put('/issues/:id', requireAuth, issueController.updateIssue);
 router.delete('/issues/:id', requireAuth, issueController.deleteIssue);
 router.post('/issues/:id/vote', requireAuth, issueController.voteIssue);
+router.get('/issues/follows/my', requireAuth, issueController.listMyFollowedIssues);
+router.post('/issues/:id/follow', requireAuth, issueController.followIssue);
+router.delete('/issues/:id/follow', requireAuth, issueController.unfollowIssue);
 router.post('/issues/:id/flag', requireAuth, issueController.flagIssue);
 router.post('/issues/:id/reply', requireAuth, requireRole(['moderator', 'admin']), issueController.replyIssue);
 

@@ -198,6 +198,59 @@ const voteIssue = async (req, res) => {
     }
 };
 
+const listMyFollowedIssues = async (req, res) => {
+    const userId = req.user?.id;
+    if (!userId) {
+        return res.status(401).json({ error: 'Utilizator neautentificat.' });
+    }
+
+    try {
+        const issueIds = await issueService.listFollowedIssueIds(userId, req.supabase);
+        return res.json({ issue_ids: issueIds });
+    } catch (err) {
+        console.error('[DB ERROR GET ISSUE FOLLOWS]:', err);
+        return res.status(500).json({ error: 'Eroare la interogarea urmăririlor.' });
+    }
+};
+
+const followIssue = async (req, res) => {
+    const userId = req.user?.id;
+    const { id } = req.params;
+
+    if (!userId) {
+        return res.status(401).json({ error: 'Utilizator neautentificat.' });
+    }
+
+    try {
+        const data = await issueService.followIssue({ issueId: id, userId }, req.supabase);
+        return res.status(201).json(data);
+    } catch (err) {
+        if (err?.code === '23505') {
+            return res.status(409).json({ error: 'Urmărești deja această sesizare.' });
+        }
+
+        console.error('[DB ERROR POST ISSUE FOLLOW]:', err);
+        return res.status(500).json({ error: 'Eroare la urmărirea sesizării.' });
+    }
+};
+
+const unfollowIssue = async (req, res) => {
+    const userId = req.user?.id;
+    const { id } = req.params;
+
+    if (!userId) {
+        return res.status(401).json({ error: 'Utilizator neautentificat.' });
+    }
+
+    try {
+        await issueService.unfollowIssue({ issueId: id, userId }, req.supabase);
+        return res.status(204).send();
+    } catch (err) {
+        console.error('[DB ERROR DELETE ISSUE FOLLOW]:', err);
+        return res.status(500).json({ error: 'Eroare la oprirea urmăririi sesizării.' });
+    }
+};
+
 const flagIssue = async (_req, res) => res.status(202).json({ message: 'Raportarea a fost înregistrată.' });
 
 const replyIssue = async (req, res) => {
@@ -218,6 +271,9 @@ module.exports = {
     updateIssueStatus,
     deleteIssue,
     voteIssue,
+    listMyFollowedIssues,
+    followIssue,
+    unfollowIssue,
     flagIssue,
     replyIssue,
 };
