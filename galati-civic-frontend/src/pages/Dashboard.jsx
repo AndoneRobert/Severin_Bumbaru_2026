@@ -84,6 +84,10 @@ export default function Dashboard() {
     }, [user, getToken]);
 
     const updateStatus = async (id, newStatus) => {
+        if (!isAdmin) {
+            showToast('Doar administratorii pot actualiza statusul.', 'error');
+            return;
+        }
         if (!authToken) {
             showToast('Autentificare necesară pentru actualizare.', 'error');
             return;
@@ -99,6 +103,10 @@ export default function Dashboard() {
     };
 
     const handleDeleteIssue = async (id) => {
+        if (!isAdmin) {
+            showToast('Doar administratorii pot șterge sesizări.', 'error');
+            return;
+        }
         if (!window.confirm('Ești sigur că vrei să ștergi această sesizare?')) return;
         if (!authToken) {
             showToast('Autentificare necesară pentru ștergere.', 'error');

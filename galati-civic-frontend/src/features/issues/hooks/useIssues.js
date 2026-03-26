@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { apiClient as defaultApiClient } from '../../../services/apiClient';
 
 const OWNED_ISSUES_KEY_PREFIX = 'galati_civic_owned_issue_ids';
 
@@ -64,10 +65,9 @@ const isIssueOwnedByUser = (issue, user, storedOwnedIssueIds = new Set()) => {
 };
 
 export const useIssues = ({
-    apiClient,
+    apiClient = defaultApiClient,
     user,
     getToken,
-    apiUrl,
     useMock = false,
     mockIssues = [],
     loadMyIssues = false,
@@ -92,7 +92,7 @@ export const useIssues = ({
                 return { issues: mockIssues, myIssues: loadMyIssues ? mockIssues : [] };
             }
 
-            const allReq = apiClient.get(`${apiUrl}/issues`);
+            const allReq = apiClient.get('/issues');
             if (!loadMyIssues) {
                 const allRes = await allReq;
                 setIssues(allRes.data);
@@ -101,7 +101,7 @@ export const useIssues = ({
 
             const [allRes, mineRes] = await Promise.all([
                 allReq,
-                apiClient.get(`${apiUrl}/issues/my`, await authHeaders()),
+                apiClient.get('/issues/my', await authHeaders()),
             ]);
             const ownedIssueIds = loadOwnedIssueIds(user);
             const myIssuesFromMineEndpoint = (mineRes.data || []).filter((issue) => isIssueOwnedByUser(issue, user, ownedIssueIds));
@@ -116,7 +116,7 @@ export const useIssues = ({
         } finally {
             setIsLoading(false);
         }
-    }, [apiClient, apiUrl, authHeaders, loadMyIssues, mockIssues, onError, useMock, user]);
+    }, [apiClient, authHeaders, loadMyIssues, mockIssues, onError, useMock, user]);
 
     const createIssue = useCallback(async (payload) => {
         if (useMock) {
@@ -134,14 +134,14 @@ export const useIssues = ({
         }
 
         const response = await apiClient.post(
-            `${apiUrl}/issues`,
+            '/issues',
             { ...payload, user_id: user?.id ?? null },
             await authHeaders(),
         );
 
         persistOwnedIssueId(user, response.data?.id);
         return response.data;
-    }, [apiClient, apiUrl, authHeaders, loadMyIssues, useMock, user]);
+    }, [apiClient, authHeaders, loadMyIssues, useMock, user]);
 
     const updateIssue = useCallback(async (issueId, payload) => {
         if (useMock) {
@@ -150,8 +150,8 @@ export const useIssues = ({
             return;
         }
 
-        await apiClient.put(`${apiUrl}/issues/${issueId}`, payload, await authHeaders());
-    }, [apiClient, apiUrl, authHeaders, loadMyIssues, useMock]);
+        await apiClient.put(`/issues/${issueId}`, payload, await authHeaders());
+    }, [apiClient, authHeaders, loadMyIssues, useMock]);
 
     const deleteIssue = useCallback(async (issueId) => {
         if (useMock) {
@@ -160,8 +160,8 @@ export const useIssues = ({
             return;
         }
 
-        await apiClient.delete(`${apiUrl}/issues/${issueId}`, await authHeaders());
-    }, [apiClient, apiUrl, authHeaders, loadMyIssues, useMock]);
+        await apiClient.delete(`/issues/${issueId}`, await authHeaders());
+    }, [apiClient, authHeaders, loadMyIssues, useMock]);
 
     const voteIssue = useCallback(async (issueId) => {
         if (votedIssues.has(issueId)) {
@@ -177,9 +177,9 @@ export const useIssues = ({
             return;
         }
 
-        await apiClient.post(`${apiUrl}/issues/${issueId}/vote`, {}, await authHeaders());
+        await apiClient.post(`/issues/${issueId}/vote`, {}, await authHeaders());
         setVotedIssues((prev) => new Set([...prev, issueId]));
-    }, [apiClient, apiUrl, authHeaders, loadMyIssues, useMock, votedIssues]);
+    }, [apiClient, authHeaders, loadMyIssues, useMock, votedIssues]);
 
     return {
         issues,

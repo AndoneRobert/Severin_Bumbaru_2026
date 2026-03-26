@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useAuth } from '../../context/AuthContext';
+import { apiClient } from '../../services/apiClient';
 import { pageStyles } from './createIssueStyles';
 import IssueTabs from './components/IssueTabs';
 import MyIssuesPanel from './components/MyIssuesPanel';
@@ -67,7 +67,6 @@ const CreateIssueContainer = () => {
     const [editLocation, setEditLocation] = useState(null);
 
     const { user, getToken } = useAuth();
-    const apiUrl = (import.meta.env.VITE_API_URL || 'https://severin-bumbaru-2026.onrender.com/api').replace(/\/+$/, '');
     const useMock = import.meta.env.VITE_USE_MOCK === 'true';
 
     const { toast, showToast } = useToast({ duration: 3200 });
@@ -85,10 +84,9 @@ const CreateIssueContainer = () => {
         setIssues,
         setMyIssues,
     } = useIssues({
-        apiClient: axios,
+        apiClient,
         user,
         getToken,
-        apiUrl,
         useMock,
         mockIssues: MOCK_MY_ISSUES,
         loadMyIssues: true,

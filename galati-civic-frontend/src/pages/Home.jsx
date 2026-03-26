@@ -6,7 +6,7 @@ import { useIssueForm } from '../features/issues/hooks/useIssueForm';
 import { useToast } from '../features/issues/hooks/useToast';
 import L from 'leaflet';
 import styles from './Home.module.css';
-import { apiBaseUrl, apiClient } from '../services/apiClient';
+import { apiClient } from '../services/apiClient';
 import { flagIssue, replyIssue } from '../services/issuesApi';
 import BaseMap from '../features/map/components/BaseMap';
 import IssueMarkersLayer from '../features/map/components/IssueMarkersLayer';
@@ -106,7 +106,6 @@ const Home = () => {
 
     const { user, getToken, isAdmin } = useAuth();
     const useMock = import.meta.env.VITE_USE_MOCK === 'true';
-    const apiUrl = apiBaseUrl;
 
     const { toast, showToast } = useToast({ duration: 3000 });
     const { form: formData, setForm: setFormData, resetForm } = useIssueForm({
@@ -125,7 +124,6 @@ const Home = () => {
         apiClient,
         user,
         getToken,
-        apiUrl,
         useMock,
         mockIssues: MOCK_ISSUES,
     });
@@ -177,6 +175,10 @@ const Home = () => {
 
     const updateStatus = async (id, newStatus, e) => {
         e?.stopPropagation();
+        if (!isAdmin) {
+            showToast('Doar administratorii pot actualiza statusul.', 'error');
+            return;
+        }
         if (useMock) {
             setIssues(prev => prev.map(i => i.id === id ? { ...i, status: newStatus } : i));
             if (selectedIssue?.id === id) setSelectedIssue(prev => ({ ...prev, status: newStatus }));
@@ -191,6 +193,10 @@ const Home = () => {
     };
 
     const sendAdminReply = async (id) => {
+        if (!isAdmin) {
+            showToast('Doar administratorii pot trimite răspunsuri oficiale.', 'error');
+            return;
+        }
         if (!adminReply.trim()) { showToast('Scrie un răspuns.', 'error'); return; }
         if (useMock) {
             setIssues(prev => prev.map(i => i.id === id ? { ...i, admin_reply: adminReply } : i));

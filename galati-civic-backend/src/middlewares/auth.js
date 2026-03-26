@@ -4,6 +4,7 @@ require('dotenv').config();
 // Folosim Anon Key pentru a valida token-ul venit de la client
 
 const supabase = require('../config/supabase');
+const { createSupabaseClient } = require('../config/supabase');
 
 const requireAuth = async (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -28,6 +29,7 @@ const requireAuth = async (req, res, next) => {
             id: user.id, 
             role: profile?.role || 'citizen' 
         };
+        req.supabase = createSupabaseClient(token);
         next();
     } catch (err) {
         return res.status(401).json({ error: 'Sesiune expirată sau invalidă.' });

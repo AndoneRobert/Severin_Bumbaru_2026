@@ -24,7 +24,7 @@ const listIssues = async (_req, res) => {
 
 const listMyIssues = async (req, res) => {
     try {
-        const data = await issueService.listIssuesByUser(req.user.id);
+        const data = await issuesService.listIssuesByUser(req.user.id, req.supabase);
         return res.json(data);
     } catch (err) {
         console.error('[DB ERROR GET MY ISSUES]:', err);
@@ -43,7 +43,7 @@ const createIssue = async (req, res) => {
     }
 
     try {
-        const data = await issueService.createIssue(payload);
+        const data = await issuesService.createIssue(payload, req.supabase);
         return res.status(201).json(data);
     } catch (err) {
         console.error('[DB ERROR POST ISSUE]:', err);
@@ -66,7 +66,7 @@ const updateIssue = async (req, res) => {
     }
 
     try {
-        const data = await issueService.updateIssue(id, updatePayload);
+        const data = await issuesService.updateIssue(id, updatePayload, req.supabase);
         if (!data) return res.status(404).json({ error: 'Raportul nu a fost găsit.' });
         return res.json(data);
     } catch (err) {
@@ -89,7 +89,7 @@ const deleteIssue = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const count = await issueService.deleteIssue(id);
+        const count = await issuesService.deleteIssue(id, req.supabase);
         if (!count) return res.status(404).json({ error: 'Raportul nu a fost găsit.' });
 
         return res.status(204).send();
@@ -102,9 +102,9 @@ const deleteIssue = async (req, res) => {
 const voteIssue = async (req, res) => {
     const { id } = req.params;
     try {
-        const issue = await issueService.getIssueVotes(id);
+        const issue = await issuesService.getIssueVotes(id, req.supabase);
         const nextVotes = (issue.votes || 0) + 1;
-        const data = await issueService.updateIssueVotes(id, nextVotes);
+        const data = await issuesService.updateIssueVotes(id, nextVotes, req.supabase);
 
         return res.json(data);
     } catch (err) {
