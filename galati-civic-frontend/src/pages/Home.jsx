@@ -484,9 +484,7 @@ const Home = () => {
             {/* ── HARTĂ + LISTĂ ── */}
             <section className={m('map-list-section')} id="map-section">
                 <div className={m(`map-card ${activeView === 'list' ? 'map-card-hidden' : ''}`)}>
-                    {user ? (
-                        <div className={m('map-hint map-hint-user')}>📍 Click pe hartă pentru a adăuga o sesizare</div>
-                    ) : (
+                    {!user && (
                         <div className={m('map-hint map-hint-guest')}>🔒 <a href="/login">Loghează-te</a> pentru a adăuga sesizări</div>
                     )}
                     <BaseMap center={GALATI_CENTER} zoom={13} style={{ height: '600px', width: '100%' }}>
@@ -520,17 +518,7 @@ const Home = () => {
                             selectedIssueId={selectedIssue?.id}
                             onSelectIssue={setSelectedIssue}
                             onVote={handleVote}
-                            renderPopup={(issue) => (
-                                <div className={m('map-popup')}>
-                                    <strong>{issue.title}</strong>
-                                    <div className={m('popup-meta')}><StatusBadge status={issue.status} /><PriorityDot priority={issue.priority} /></div>
-                                    <p>{issue.description?.substring(0, 100)}{issue.description?.length > 100 ? '...' : ''}</p>
-                                    <div className={m('popup-footer')}>
-                                        <span className={m('popup-votes')}>▲ {issue.votes || 0} voturi</span>
-                                        <button onClick={() => setSelectedIssue(issue)} className={m('popup-detail-btn')}>Detalii →</button>
-                                    </div>
-                                </div>
-                            )}
+                            showPopup={false}
                         />
                     </BaseMap>
                     <div className={m('map-legend')}>

@@ -5,7 +5,6 @@ import L from 'leaflet';
 import { useAuth } from '../../context/AuthContext';
 import { apiClient } from '../../services/apiClient';
 import { pageStyles } from './createIssueStyles';
-import IssueTabs from './components/IssueTabs';
 import MyIssuesPanel from './components/MyIssuesPanel';
 import NewIssueStepper from './components/NewIssueStepper';
 import IssuesMapPanel from './components/IssuesMapPanel';
@@ -197,9 +196,7 @@ const CreateIssueContainer = ({ initialTab = 'my' }) => {
         <div className="ci-page">
             <Toast msg={toast.msg} show={toast.show} type={toast.type} />
             <style>{pageStyles}</style>
-            <div className="ci-header"><div className="ci-header-inner"><Link to="/" className="ci-back">← Înapoi la hartă</Link><div className="ci-header-title"><h1>🚨 Raportare probleme</h1><p>Sesizează problemele din Galați și urmărește rezolvarea lor</p></div><div className="ci-header-stats"><div className="ci-hstat"><span className="ci-hstat-val">{myIssues.length}</span><span className="ci-hstat-lbl">Sesizările mele</span></div><div className="ci-hstat"><span className="ci-hstat-val">{myIssues.filter((i) => i.status === 'Rezolvat').length}</span><span className="ci-hstat-lbl">Rezolvate</span></div><div className="ci-hstat"><span className="ci-hstat-val">{myIssues.reduce((s, i) => s + (i.votes || 0), 0)}</span><span className="ci-hstat-lbl">Voturi primite</span></div></div></div></div>
-
-            <IssueTabs tab={tab} myIssuesCount={myIssues.length} allIssuesCount={allIssues.length} onSelectMy={() => setTab('my')} onSelectNew={() => { setTab('new'); setStep(1); }} onSelectMap={() => setTab('map')} />
+            <div className="ci-header"><div className="ci-header-inner"><div className="ci-header-title"><h1>Raportare probleme</h1><p>Sesizează problemele din Galați și urmărește rezolvarea lor</p></div><div className="ci-header-stats"><div className="ci-hstat"><span className="ci-hstat-val">{myIssues.length}</span><span className="ci-hstat-lbl">Sesizările mele</span></div><div className="ci-hstat"><span className="ci-hstat-val">{myIssues.filter((i) => i.status === 'Rezolvat').length}</span><span className="ci-hstat-lbl">Rezolvate</span></div><div className="ci-hstat"><span className="ci-hstat-val">{myIssues.reduce((s, i) => s + (i.votes || 0), 0)}</span><span className="ci-hstat-lbl">Voturi primite</span></div></div></div></div>
 
             <div className="ci-body">
                 {tab === 'my' && <div className="ci-my-section"><MyIssuesPanel isLoading={isLoading} myIssues={myIssues} onSelectIssue={setSelectedIssue} onStartNew={() => { setTab('new'); setStep(1); }} onVote={handleVote} votedIssues={votedIssues} onEdit={openEdit} onDelete={setDeleteConfirm} categories={CATEGORIES} priorities={PRIORITIES} StatusBadge={StatusBadge} /></div>}
