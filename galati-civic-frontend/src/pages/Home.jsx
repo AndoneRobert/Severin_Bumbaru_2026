@@ -1,3 +1,4 @@
+<<<<<<< ours
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 
@@ -10,6 +11,34 @@ import { createIssue, flagIssue, getAllIssues, replyIssue, updateIssue, voteIssu
 import styles from './Home.module.css';
 
 const m = (classNames) => classNames.split(/\s+/).filter(Boolean).map((cn) => styles[cn] || cn).join(' ');
+=======
+import React, { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import axios from 'axios';
+import 'leaflet/dist/leaflet.css';
+import { useAuth } from '../context/AuthContext';
+import { useIssues } from '../features/issues/hooks/useIssues';
+import { useIssueForm } from '../features/issues/hooks/useIssueForm';
+import { useToast } from '../features/issues/hooks/useToast';
+import L from 'leaflet';
+
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({ iconRetinaUrl: markerIcon2x, iconUrl: markerIcon, shadowUrl: markerShadow });
+
+const makeIcon = (color) => L.divIcon({
+    className: '',
+    html: `<div style="width:26px;height:26px;border-radius:50% 50% 50% 0;background:${color};border:2.5px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.4);transform:rotate(-45deg);"></div>`,
+    iconSize: [26, 26], iconAnchor: [13, 26], popupAnchor: [0, -30],
+});
+const STATUS_ICONS = {
+    'Nou': makeIcon('#ef4444'), 'În lucru': makeIcon('#f59e0b'),
+    'Rezolvat': makeIcon('#10b981'), 'În verificare': makeIcon('#3b82f6'),
+};
+>>>>>>> theirs
 
 const CATEGORIES = [
     { value: 'Infrastructură', icon: '🛣️' }, { value: 'Iluminat', icon: '💡' },
@@ -76,29 +105,25 @@ const Toast = ({ msg, show, type = 'info' }) => (
 
 // ── Componenta principală ──
 const Home = () => {
-    const [issues, setIssues] = useState([]);
     const [filter, setFilter] = useState('Toate');
     const [catFilter, setCatFilter] = useState('Toate');
     const [search, setSearch] = useState('');
     const [newLocation, setNewLocation] = useState(null);
     const [selectedIssue, setSelectedIssue] = useState(null);
-    const [toast, setToast] = useState({ msg: '', show: false, type: 'info' });
     const [sortBy, setSortBy] = useState('date');
-    const [formData, setFormData] = useState({ title: '', description: '', category: 'Infrastructură', priority: 'Medie' });
     const [submitting, setSubmitting] = useState(false);
     const [adminReply, setAdminReply] = useState('');
     const [showReplyBox, setShowReplyBox] = useState(null);
-    const [votedIssues, setVotedIssues] = useState(new Set());
     const [followedIssues, setFollowedIssues] = useState(new Set());
     const [flaggedIssues, setFlaggedIssues] = useState(new Set());
     const [activeView, setActiveView] = useState('map');
-    const [isLoading, setIsLoading] = useState(true);
     const [urgentBannerClosed, setUrgentBannerClosed] = useState(false);
 
     const { user, getToken } = useAuth();
     const isAdmin = user?.role === 'admin' || user?.email === 'admin@galati.ro';
     const useMock = import.meta.env.VITE_USE_MOCK === 'true';
 
+<<<<<<< ours
     const showToast = useCallback((msg, type = 'info') => {
         setToast({ msg, show: true, type });
         setTimeout(() => setToast({ msg: '', show: false, type: 'info' }), 3000);
@@ -119,21 +144,45 @@ const Home = () => {
     }, [useMock]);
 
     useEffect(() => { fetchIssues(); }, [fetchIssues]);
+=======
+    const { toast, showToast } = useToast({ duration: 3000 });
+    const { form: formData, setForm: setFormData, resetForm } = useIssueForm({
+        initialForm: { title: '', description: '', category: 'Infrastructură', priority: 'Medie', lat: null, lng: null },
+    });
+    const {
+        issues,
+        setIssues,
+        isLoading,
+        votedIssues,
+        loadIssues,
+        createIssue,
+        voteIssue,
+    } = useIssues({
+        apiClient: axios,
+        user,
+        getToken,
+        apiUrl,
+        useMock,
+        mockIssues: MOCK_ISSUES,
+    });
+
+    useEffect(() => {
+        loadIssues().catch(() => setIssues(MOCK_ISSUES));
+    }, [loadIssues, setIssues]);
+>>>>>>> theirs
 
     const handleVote = async (id, e) => {
         e?.stopPropagation();
         if (!user) { showToast('Trebuie să fii logat pentru a vota!', 'error'); return; }
         if (votedIssues.has(id)) { showToast('Ai votat deja această sesizare.', 'error'); return; }
-        if (useMock) {
-            setIssues(prev => prev.map(i => i.id === id ? { ...i, votes: (i.votes || 0) + 1 } : i));
-            setVotedIssues(prev => new Set([...prev, id]));
-            showToast('Vot înregistrat! ✓', 'success');
-            return;
-        }
         try {
+<<<<<<< ours
             await voteIssue(id, user.token);
             setVotedIssues(prev => new Set([...prev, id]));
             fetchIssues();
+=======
+            await voteIssue(id);
+>>>>>>> theirs
             showToast('Vot înregistrat! ✓', 'success');
         } catch { showToast('Ai votat deja.', 'error'); }
     };
@@ -177,7 +226,7 @@ const Home = () => {
         try {
             await updateIssue(id, { status: newStatus }, user.token);
             showToast(`Status → ${newStatus}`, 'success');
-            fetchIssues();
+            await loadIssues();
         } catch { showToast('Eroare la actualizare.', 'error'); }
     };
 
@@ -192,7 +241,7 @@ const Home = () => {
         try {
             await replyIssue(id, adminReply, user.token);
             showToast('Răspuns trimis!', 'success');
-            setShowReplyBox(null); setAdminReply(''); fetchIssues();
+            setShowReplyBox(null); setAdminReply(''); await loadIssues();
         } catch { showToast('Eroare la trimitere.', 'error'); }
     };
 
@@ -204,6 +253,7 @@ const Home = () => {
         }
         setSubmitting(true);
         try {
+<<<<<<< ours
             const newIssue = { id: Date.now(), ...formData, lat: newLocation.lat, lng: newLocation.lng, votes: 0, status: 'Nou', created_at: new Date().toISOString(), admin_reply: null };
             if (useMock) {
                 await new Promise(r => setTimeout(r, 700));
@@ -212,9 +262,14 @@ const Home = () => {
                 const token = (await getToken?.()) || user?.token;
                 await createIssue({ ...newIssue, user_id: user?.id ?? null }, token);
                 fetchIssues();
+=======
+            await createIssue({ ...formData, lat: newLocation.lat, lng: newLocation.lng, admin_reply: null });
+            if (!useMock) {
+                await loadIssues();
+>>>>>>> theirs
             }
             setNewLocation(null);
-            setFormData({ title: '', description: '', category: 'Infrastructură', priority: 'Medie' });
+            resetForm({ title: '', description: '', category: 'Infrastructură', priority: 'Medie', lat: null, lng: null });
             showToast('Sesizare trimisă! ✓', 'success');
         } catch { showToast('Eroare la trimitere.', 'error'); }
         finally { setSubmitting(false); }
