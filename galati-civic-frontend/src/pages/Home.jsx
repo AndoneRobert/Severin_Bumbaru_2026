@@ -90,18 +90,18 @@ const Toast = ({ msg, show, type = 'info' }) => (
 
 // ── Componenta principală ──
 const Home = () => {
-    const [filter, setFilter] = useState('Toate');
+    const filter = 'Toate';
     const [catFilter, setCatFilter] = useState('Toate');
-    const [search, setSearch] = useState('');
+    const [search] = useState('');
     const [newLocation, setNewLocation] = useState(null);
     const [selectedIssue, setSelectedIssue] = useState(null);
-    const [sortBy, setSortBy] = useState('date');
+    const [sortBy] = useState('date');
     const [submitting, setSubmitting] = useState(false);
     const [adminReply, setAdminReply] = useState('');
     const [showReplyBox, setShowReplyBox] = useState(null);
     const [followedIssues, setFollowedIssues] = useState(new Set());
     const [flaggedIssues, setFlaggedIssues] = useState(new Set());
-    const [activeView, setActiveView] = useState('map');
+    const [activeView] = useState('map');
     const [urgentBannerClosed, setUrgentBannerClosed] = useState(false);
 
     const { user, getToken, isAdmin } = useAuth();
@@ -244,7 +244,6 @@ const Home = () => {
             return new Date(b.created_at || 0) - new Date(a.created_at || 0);
         });
 
-    const urgentIssues = issues.filter(i => i.priority === 'Urgentă' && i.status !== 'Rezolvat');
     const topVoted = [...issues].sort((a, b) => (b.votes || 0) - (a.votes || 0)).slice(0, 3);
     const recentActivity = [...issues].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
     const resolvedCount = issues.filter(i => i.status === 'Rezolvat').length;
@@ -347,24 +346,7 @@ const Home = () => {
             <Toast msg={toast.msg} show={toast.show} type={toast.type} />
             {selectedIssue && <DetailModal issue={selectedIssue} />}
 
-            {/* ── BANNER URGENTE ── */}
-            {urgentIssues.length > 0 && !urgentBannerClosed && (
-                <div className={m('urgent-banner')}>
-                    <div className={m('urgent-banner-inner')}>
-                        <div className={m('urgent-banner-left')}>
-                            <span className={m('urgent-pulse-dot')} />
-                            <span className={m('urgent-label')}>URGENT</span>
-                            <span className={m('urgent-text')}>
-                                {urgentIssues.length} sesizare{urgentIssues.length > 1 ? 'i' : ''} urgentă{urgentIssues.length > 1 ? '' : ''} în așteptare:
-                            </span>
-                            <span className={m('urgent-title')} onClick={() => setSelectedIssue(urgentIssues[0])} style={{ cursor: 'pointer' }}>
-                                {urgentIssues[0]?.title}
-                            </span>
-                        </div>
-                        <button className={m('urgent-close')} onClick={() => setUrgentBannerClosed(true)}>✕</button>
-                    </div>
-                </div>
-            )}
+
 
             {/* ── HERO ── */}
             <section className={m('hero-section')}>
@@ -380,20 +362,6 @@ const Home = () => {
                         Raportează probleme urbane direct pe hartă, susține sesizările
                         vecinilor și urmărește rezolvarea lor în timp real.
                     </p>
-                    <div className={m('hero-cta')}>
-                        <a href="#map-section" className={m('btn-primary')} style={{ textDecoration: 'none' }}>📍 Deschide Harta</a>
-                        {!user ? (
-                            <a href="/login" className={m('btn-secondary')} style={{ textDecoration: 'none' }}>Creează cont gratuit →</a>
-                        ) : (
-                            <a href="#map-section" className={m('btn-secondary')} style={{ textDecoration: 'none' }}>✏️ Raportează o problemă</a>
-                        )}
-                    </div>
-                    <div className={m('hero-badges')}>
-                        <span className={m('hero-badge')}>🔒 Date securizate</span>
-                        <span className={m('hero-badge')}>🏛️ Integrat cu Primăria</span>
-                        <span className={m('hero-badge')}>📱 Responsive</span>
-                        <span className={m('hero-badge')}>⚡ Timp real</span>
-                    </div>
                 </div>
                 {/* Mini stats animate în hero */}
                 <div className={m('hero-mini-stats')}>
@@ -513,45 +481,8 @@ const Home = () => {
                 </div>
             </section>
 
-            {/* ── FILTRE & CĂUTARE ── */}
-            <div className={m('filter-area')} id="map-section">
-                <div className={m('filter-bar')}>
-                    <div className={m('search-wrap')}>
-                        <span className={m('search-icon')}>🔍</span>
-                        <input className={m('search-input')} type="text" placeholder="Caută sesizări după titlu sau descriere..." value={search} onChange={e => setSearch(e.target.value)} />
-                        {search && <button className={m('search-clear')} onClick={() => setSearch('')}>✕</button>}
-                    </div>
-                    <div className={m('filter-controls')}>
-                        <div className={m('filter-group')}>
-                            <span className={m('filter-label')}>Status:</span>
-                            {['Toate', 'Nou', 'În lucru', 'Rezolvat'].map(s => (
-                                <button key={s} className={m(`filter-btn ${filter === s ? 'active' : ''}`)} onClick={() => setFilter(s)}>{s}</button>
-                            ))}
-                        </div>
-                        <div className={m('filter-group filter-right')}>
-                            <span className={m('filter-label')}>Sortare:</span>
-                            <select className={m('sort-select')} value={sortBy} onChange={e => setSortBy(e.target.value)}>
-                                <option value="date">🕐 Cele mai recente</option>
-                                <option value="votes">▲ Cele mai votate</option>
-                                <option value="priority">🔥 Prioritate</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div className={m('filter-results-bar')}>
-                    <span className={m('results-count')}>{filteredIssues.length} sesizări găsite</span>
-                    {(filter !== 'Toate' || catFilter !== 'Toate' || search) && (
-                        <button className={m('clear-filters')} onClick={() => { setFilter('Toate'); setCatFilter('Toate'); setSearch(''); }}>✕ Resetează filtrele</button>
-                    )}
-                    <div className={m('view-toggle')}>
-                        <button className={m(`view-btn ${activeView === 'map' ? 'active' : ''}`)} onClick={() => setActiveView('map')}>🗺 Hartă</button>
-                        <button className={m(`view-btn ${activeView === 'list' ? 'active' : ''}`)} onClick={() => setActiveView('list')}>📋 Listă</button>
-                    </div>
-                </div>
-            </div>
-
             {/* ── HARTĂ + LISTĂ ── */}
-            <section className={m('map-list-section')}>
+            <section className={m('map-list-section')} id="map-section">
                 <div className={m(`map-card ${activeView === 'list' ? 'map-card-hidden' : ''}`)}>
                     {user ? (
                         <div className={m('map-hint map-hint-user')}>📍 Click pe hartă pentru a adăuga o sesizare</div>
@@ -709,19 +640,27 @@ const Home = () => {
 
             {/* ── CUM FUNCȚIONEAZĂ ── */}
             <section className={m('how-section')}>
-                <h2 className={m('section-title')}>Cum Funcționează</h2>
+                <div className={m('how-header')}>
+                    <h2 className={m('section-title')}>Cum Funcționează</h2>
+                    <p className={m('how-subtitle')}>
+                        Raportezi în mai puțin de 1 minut, iar sesizarea ajunge direct la departamentul potrivit.
+                    </p>
+                </div>
                 <div className={m('how-grid')}>
                     {[
                         { num: '01', icon: '📍', title: 'Identifici problema', desc: 'Dai click pe hartă exact unde se află problema — groapă, felinar stricat, deșeuri ilegale.' },
                         { num: '02', icon: '📝', title: 'Completezi sesizarea', desc: 'Adaugi titlu, descriere și selectezi categoria și prioritatea problemei.' },
                         { num: '03', icon: '🏛️', title: 'Primăria preia sesizarea', desc: 'Sesizarea ajunge direct la departamentul responsabil care o analizează și alocă resurse.' },
                         { num: '04', icon: '✅', title: 'Urmărești rezolvarea', desc: 'Primești notificări la fiecare actualizare de status până la rezolvarea completă.' },
-                    ].map(step => (
+                    ].map((step, index, steps) => (
                         <div key={step.num} className={m('how-step')}>
-                            <div className={m('how-num')}>{step.num}</div>
-                            <div className={m('how-icon')}>{step.icon}</div>
+                            <div className={m('how-step-top')}>
+                                <div className={m('how-num')}>{step.num}</div>
+                                <div className={m('how-icon')}>{step.icon}</div>
+                            </div>
                             <h3>{step.title}</h3>
                             <p>{step.desc}</p>
+                            {index < steps.length - 1 && <span className={m('how-step-arrow')}>→</span>}
                         </div>
                     ))}
                 </div>
@@ -774,16 +713,30 @@ const Home = () => {
                     <div className={m('footer-brand')}>
                         <span className={m('footer-logo')}>Galați<span>Civic</span></span>
                         <p>Platforma civică oficială a Municipiului Galați</p>
+                        <div className={m('footer-badges')}>
+                            <span>🔐 Date protejate</span>
+                            <span>📍 Sesizări geolocalizate</span>
+                            <span>⚡ Răspuns rapid</span>
+                        </div>
                     </div>
-                    <div className={m('footer-links')}>
-                        <a href="/about">Despre platformă</a>
-                        <a href="/privacy">Confidențialitate</a>
-                        <a href="/contact">Contact</a>
-                        <a href="https://www.primaria-galati.ro" target="_blank" rel="noreferrer">Primăria Galați ↗</a>
+                    <div className={m('footer-columns')}>
+                        <div className={m('footer-links')}>
+                            <h4>Platformă</h4>
+                            <a href="/about">Despre platformă</a>
+                            <a href="/privacy">Confidențialitate</a>
+                            <a href="/contact">Contact</a>
+                        </div>
+                        <div className={m('footer-links')}>
+                            <h4>Resurse utile</h4>
+                            <a href="https://www.primaria-galati.ro" target="_blank" rel="noreferrer">Primăria Galați ↗</a>
+                            <a href="#map-section">Vezi harta sesizărilor</a>
+                            <a href="/login">Autentificare</a>
+                        </div>
                     </div>
                 </div>
                 <div className={m('footer-bottom')}>
                     <p>© 2026 Galați Civic · Vocea ta contează în orașul nostru.</p>
+                    <p className={m('footer-made-with')}>Construit pentru o comunitate mai curată, sigură și conectată.</p>
                 </div>
             </footer>
 

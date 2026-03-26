@@ -161,23 +161,23 @@ export default function Navbar() {
                 {/* Brand */}
                 <div className={m('nav-brand')}>
                     <Link to="/">
-                        <span className={m('nav-logo-icon')}>🏙️</span>
+                        <span className={m('nav-logo-icon')} aria-hidden="true">GC</span>
                         Galați<span>Civic</span>
                     </Link>
                 </div>
 
                 {/* Links desktop */}
                 <div className={m(`nav-links ${mobileOpen ? 'nav-links-open' : ''}`)}>
-                    <Link to="/" className={m(`nav-link ${isActive('/') ? 'nav-link-active' : ''}`)}>🗺 Hartă</Link>
-                    <Link to="/dashboard" className={m(`nav-link ${isActive('/dashboard') ? 'nav-link-active' : ''}`)}>📋 Sesizări</Link>
+                    <Link to="/" className={m(`nav-link ${isActive('/') ? 'nav-link-active' : ''}`)}>Hartă</Link>
+                    <Link to="/dashboard" className={m(`nav-link ${isActive('/dashboard') ? 'nav-link-active' : ''}`)}>Sesizări</Link>
                     {isAuthenticated && (
                         <>
-                            <Link to="/my-issues" className={m(`nav-link ${isActive('/my-issues') ? 'nav-link-active' : ''}`)}>📂 Sesizările mele</Link>
-                            <Link to="/create-issue" className={m(`nav-link ${isActive('/create-issue') ? 'nav-link-active' : ''}`)}>✚ Raportează</Link>
+                            <Link to="/my-issues" className={m(`nav-link ${isActive('/my-issues') ? 'nav-link-active' : ''}`)}>Sesizările mele</Link>
+                            <Link to="/create-issue" className={m(`nav-link ${isActive('/create-issue') ? 'nav-link-active' : ''}`)}>Raportează</Link>
                         </>
                     )}
                     {isAdmin && (
-                        <Link to="/admin" className={m(`nav-link nav-link-admin ${isActive('/admin') ? 'nav-link-active' : ''}`)}>⚙️ Admin</Link>
+                        <Link to="/admin" className={m(`nav-link nav-link-admin ${isActive('/admin') ? 'nav-link-active' : ''}`)}>Admin</Link>
                     )}
                 </div>
 
@@ -186,7 +186,6 @@ export default function Navbar() {
                     {/* Buton Raportează — navighează către pagina dedicată */}
                     <button className={m('nav-report-btn')} onClick={openReport}>
                         <span className={m('nav-report-pulse')} />
-                        <span>✚</span>
                         <span>Raportează</span>
                     </button>
 
@@ -202,17 +201,17 @@ export default function Navbar() {
                                     <div className={m('dropdown-header')}>
                                         <span className={m('dropdown-name')}>{displayName}</span>
                                         <span className={m('dropdown-email')}>{user?.email}</span>
-                                        {isAdmin && <span className={m('dropdown-role')}>⚙️ Administrator</span>}
+                                        {isAdmin && <span className={m('dropdown-role')}>Administrator</span>}
                                     </div>
                                     <div className={m('dropdown-divider')} />
-                                    <Link to="/profile" className={m('dropdown-item')} onClick={() => setMenuOpen(false)}>👤 Profilul meu</Link>
-                                    <Link to="/my-issues" className={m('dropdown-item')} onClick={() => setMenuOpen(false)}>📋 Sesizările mele</Link>
-                                    <Link to="/create-issue" className={m('dropdown-item')} onClick={() => setMenuOpen(false)}>✚ Raportează o sesizare</Link>
+                                    <Link to="/profile" className={m('dropdown-item')} onClick={() => setMenuOpen(false)}>Profilul meu</Link>
+                                    <Link to="/my-issues" className={m('dropdown-item')} onClick={() => setMenuOpen(false)}>Sesizările mele</Link>
+                                    <Link to="/create-issue" className={m('dropdown-item')} onClick={() => setMenuOpen(false)}>Raportează o sesizare</Link>
                                     {isAdmin && (
-                                        <Link to="/admin" className={m('dropdown-item dropdown-item-admin')} onClick={() => setMenuOpen(false)}>⚙️ Panou Admin</Link>
+                                        <Link to="/admin" className={m('dropdown-item dropdown-item-admin')} onClick={() => setMenuOpen(false)}>Panou Admin</Link>
                                     )}
                                     <div className={m('dropdown-divider')} />
-                                    <button className={m('dropdown-item dropdown-logout')} onClick={handleLogout}>🚪 Deconectare</button>
+                                    <button className={m('dropdown-item dropdown-logout')} onClick={handleLogout}>Deconectare</button>
                                 </div>
                             )}
                         </div>

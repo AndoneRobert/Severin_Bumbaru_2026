@@ -202,9 +202,9 @@ const CreateIssueContainer = ({ initialTab = 'my' }) => {
             <IssueTabs tab={tab} myIssuesCount={myIssues.length} allIssuesCount={allIssues.length} onSelectMy={() => setTab('my')} onSelectNew={() => { setTab('new'); setStep(1); }} onSelectMap={() => setTab('map')} />
 
             <div className="ci-body">
-                {tab === 'my' && <div className="ci-my-section"><MyIssuesPanel isLoading={isLoading} myIssues={myIssues} onSelectIssue={setSelectedIssue} onStartNew={() => { setTab('new'); setStep(1); }} onVote={handleVote} votedIssues={votedIssues} onEdit={openEdit} onDelete={setDeleteConfirm} categories={CATEGORIES} priorities={PRIORITIES} renderStatusBadge={(status) => <StatusBadge status={status} />} /></div>}
+                {tab === 'my' && <div className="ci-my-section"><MyIssuesPanel isLoading={isLoading} myIssues={myIssues} onSelectIssue={setSelectedIssue} onStartNew={() => { setTab('new'); setStep(1); }} onVote={handleVote} votedIssues={votedIssues} onEdit={openEdit} onDelete={setDeleteConfirm} categories={CATEGORIES} priorities={PRIORITIES} StatusBadge={StatusBadge} /></div>}
                 {tab === 'new' && <NewIssueStepper step={step} form={form} formErrors={formErrors} setForm={setForm} setFormErrors={setFormErrors} onBack={prevStep} onNext={nextStep} onSubmit={handleSubmit} submitting={submitting} validate={validate} categories={CATEGORIES} priorities={PRIORITIES} mapCenter={GALATI_CENTER} selectedIcon={SELECTED_ICON} />}
-                {tab === 'map' && <IssuesMapPanel mapSearch={mapSearch} onMapSearchChange={setMapSearch} mapFilter={mapFilter} onMapFilterChange={setMapFilter} filteredForMap={filteredForMap} onSelectIssue={setSelectedIssue} selectedIssueId={selectedIssue?.id} categories={CATEGORIES} renderStatusBadge={(status) => <StatusBadge status={status} />} mapCenter={GALATI_CENTER} />}
+                {tab === 'map' && <IssuesMapPanel mapSearch={mapSearch} onMapSearchChange={setMapSearch} mapFilter={mapFilter} onMapFilterChange={setMapFilter} filteredForMap={filteredForMap} onSelectIssue={setSelectedIssue} selectedIssueId={selectedIssue?.id} categories={CATEGORIES} StatusBadge={StatusBadge} mapCenter={GALATI_CENTER} />}
             </div>
 
             {selectedIssue && (
